@@ -159,8 +159,11 @@ export function makeMap(e) {
   }
   // people along the way, standing beside it
   const npcs = (m.npcs || []).map((s, i) => { const [who, text] = s.split('|'), p = path[Math.floor(path.length * (0.18 + i * 0.3))] || path[1]; let nx = p[0], ny = p[1]; for (const d of [-1, 1]) if (get(p[0], p[1] + d) === FLOOR && !rests.some((r) => r.x === p[0] && r.y === p[1] + d)) { ny = p[1] + d; break; } if (ny === p[1]) { ny = p[1] - 1; put(nx, ny, FLOOR); } return { x: nx, y: ny, who, text }; });
+  // where the captain of the road stands: on the way itself, a little before a place to rest
+  const midK = (m.size || 1) >= 3 ? 0.45 : (m.size || 1) >= 2 ? 0.36 : 0.42; let midAt = null;
+  for (let t = 0; t < 12 && !midAt; t++) { const [x, y] = path[clamp(Math.floor(path.length * midK) + t * (t % 2 ? 1 : -1), 3, path.length - 4)]; if (walkable(get(x, y)) && !npcs.some((n) => n.x === x && n.y === y)) midAt = { x, y }; }
   const at = (x, y) => (walkable(get(x, y)) ? 0 : 1);
-  return { w, h, grid, ob, dc, var4, props, P, start: { x: start[0], y: start[1] }, end: { x: end[0], y: end[1] }, chests, npcs, rests, theme: m.theme, at, get };
+  return { w, h, grid, ob, dc, var4, props, P, start: { x: start[0], y: start[1] }, end: { x: end[0], y: end[1] }, chests, npcs, rests, midAt, mid: null, theme: m.theme, at, get };
 
   function clear(x, y, to) { if (inb(x, y)) trail[I(x, y)] = 1; const v = get(x, y); if (v === ROAD || v === BRIDGE || v === PROP) return; put(x, y, v === WATER ? BRIDGE : to); }
   function blob(cx, cy, r) { for (let y = cy - r - 1; y <= cy + r + 1; y++) for (let x = cx - r - 2; x <= cx + r + 2; x++) if (x > 0 && y > 0 && x < w - 1 && y < h - 1 && ((x - cx) / (r + 1.5)) ** 2 + ((y - cy) / r) ** 2 <= 1 + (N2(x / 2, y / 2) - 0.5) * 0.6) put(x, y, FLOOR); }
@@ -218,7 +221,7 @@ export function makeMap(e) {
     for (let i = 0; i < nB; i++) for (let t = 0; t < 40; t++) { const q = rooms[R.int(0, rooms.length - 1)], x = q.x0 + R.int(0, q.rw - 1), y = q.y0 + R.int(0, q.rh - 1); if (get(x, y) === FLOOR && Math.abs(y - my) > 1 && !branches.some(([a, b]) => a === x && b === y)) { branches.push([x, y]); break; } }
   }
 }
-export const blocked = (M, x, y) => M.at(x, y) === 1 || M.npcs.some((n) => n.x === x && n.y === y) || M.chests.some((c) => c.x === x && c.y === y) || M.rests.some((r) => r.x === x && r.y === y);
+export const blocked = (M, x, y) => M.at(x, y) === 1 || (M.mid && M.mid.x === x && M.mid.y === y) || M.npcs.some((n) => n.x === x && n.y === y) || M.chests.some((c) => c.x === x && c.y === y) || M.rests.some((r) => r.x === x && r.y === y);
 export const restKind = (M) => (M.P.layout === 'halls' ? 'censer' : M.P.layout === 'isles' ? 'lotus' : M.P.liquid === 'lava' ? 'censer' : 'spring');
 
 // ---------------------------------------------------------------- drawing
@@ -266,6 +269,12 @@ export function drawMap(g, M, cam, walkers, t, o = {}) {
   }]);
   const fig = (img, fx, fy) => g.drawImage(img, Math.round(fx * TS + (TS - img.width) / 2 - cam.x), Math.round(fy * TS + TS - img.height + 2 - cam.y));
   for (const n of M.npcs) things.push([n.y, () => fig(walker(n.who, 'down', Math.floor(t / 600) % 2), n.x, n.y)]);
+  if (M.mid) { const d = M.mid; things.push([d.y, () => { // the captain of the road: a dark red glow underfoot, a mark of danger over the head
+    const sx = d.x * TS + 8 - cam.x, sy = d.y * TS + 12 - cam.y, k = (Math.sin(t / 220) + 1) / 2, gl = g.createRadialGradient(sx, sy, 1, sx, sy, 15);
+    gl.addColorStop(0, `rgba(200,30,40,${0.35 + k * 0.3})`); gl.addColorStop(1, 'rgba(120,0,20,0)'); g.fillStyle = gl; g.fillRect(sx - 16, sy - 16, 32, 32);
+    const img = walker(d.id, 'left', Math.floor(t / 400) % 2); fig(img, d.x, d.y);
+    const my = Math.round(d.y * TS + TS - img.height - 5 - cam.y - k * 2); g.fillStyle = '#2a0a0a'; g.fillRect(sx - 2, my - 1, 4, 7); g.fillStyle = '#ff4a3a'; g.fillRect(sx - 1, my, 2, 3); g.fillRect(sx - 1, my + 4, 2, 1);
+  }]); }
   if (o.goal) { const e = M.end, k = (Math.sin(t / 260) + 1) / 2; things.push([e.y, () => { const gx = e.x * TS + 8 - cam.x, gy = e.y * TS + 6 - cam.y, gl = g.createRadialGradient(gx, gy, 1, gx, gy, 16); gl.addColorStop(0, o.goal === 'lair' ? `rgba(220,40,60,${0.35 + k * 0.3})` : `rgba(255,240,180,${0.4 + k * 0.3})`); gl.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gl; g.fillRect(gx - 16, gy - 16, 32, 32); if (o.goal === 'lair') lairMark(g, gx, gy, t); else fig(walker(o.goal, 'left', 0), e.x, e.y); }]); }
   for (const w of walkers) things.push([w.fy + 0.01, () => fig(walker(w.id, w.dir, w.step), w.fx, w.fy)]);
   things.sort((a, b) => a[0] - b[0]); for (const [, fn] of things) fn();

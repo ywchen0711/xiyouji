@@ -29,13 +29,13 @@ export const canWear = (id, g) => !GEAR[g].who || GEAR[g].who.includes(id);
 // ---------------------------------------------------------------- demons
 const NORM = (lv) => ({ hp: 22 + lv * 9 + lv * lv * 0.13, atk: 11 + lv * 4.3, def: 5 + lv * 2.0, mag: 8 + lv * 3.3, spd: 7 + lv * 2.0 });
 export function foeUnit(id, lv) {
-  const F = FOES[id], C = CAST[id], n = NORM(lv), m = F.m, boss = !!F.boss;
+  const F = FOES[id], C = CAST[id], n = NORM(lv), m = F.m, boss = !!F.boss, mid = !!F.mid;
   const hp = Math.round(n.hp * m[0] * (boss ? 1.15 : 1));
-  return { id, name: C?.name || id, lv, boss, hp, max: hp, atk: Math.round(n.atk * m[1] * (boss ? 1.08 : 1)), def: Math.round(n.def * m[2]), mag: Math.round(n.mag * m[3]), spd: Math.round(n.spd * m[4]), arts: F.arts, weak: F.weak, res: F.res, st: {}, side: 'foe' };
+  return { id, name: C?.name || id, lv, boss, mid, hp, max: hp, atk: Math.round(n.atk * m[1] * (boss ? 1.08 : 1)), def: Math.round(n.def * m[2]), mag: Math.round(n.mag * m[3]), spd: Math.round(n.spd * m[4]), arts: F.arts, weak: F.weak, res: F.res, st: {}, side: 'foe' };
 }
 // what a demon gives: a share of the level's need, less when the pilgrims are far above it
-export function foeExp(f, plv) { const k = clamp(1 - (plv - f.lv) * 0.09, 0.15, 1.4) * (1 + 3 / f.lv); return Math.max(1, Math.round(expNeed(f.lv) * (f.boss ? 0.42 : 0.065) * k)); }
-export const foeGold = (f) => Math.round((6 + f.lv * 3.2) * (f.boss ? 6 : 1));
+export function foeExp(f, plv) { const k = clamp(1 - (plv - f.lv) * 0.09, 0.15, 1.4) * (1 + 3 / f.lv); return Math.max(1, Math.round(expNeed(f.lv) * (f.mid ? 0.2 : f.boss ? 0.42 : 0.065) * k)); }
+export const foeGold = (f) => Math.round((6 + f.lv * 3.2) * (f.mid ? 4 : f.boss ? 6 : 1));
 
 // ---------------------------------------------------------------- blows and spells
 // a: the actor (with atk def mag spd st), t: the target, x: the art's multiple

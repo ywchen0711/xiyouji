@@ -2,7 +2,7 @@
 // buddhas: each episode is its words, sometimes a town, a road to walk (demons on it, chests and people beside it)
 // and the great demon at its end. The journey's state lives in S and is saved in the browser (and to the account,
 // when signed in to the game hub).
-import { STORY, MEMBERS, SKILLS, ITEMS, GEAR, SHOP, CHEST, NAN, ORDER } from './data/game.js';
+import { STORY, MEMBERS, SKILLS, ITEMS, GEAR, SHOP, CHEST, NAN, ORDER, MIDS, LOCAL } from './data/game.js';
 import { CAST } from './data/cast.js';
 import { newUnit, setLevel, stats, epLv, expNeed, canWear } from './rules.js';
 import { Battle } from './battle.js';
@@ -91,7 +91,7 @@ async function chapterCard(e) { sfx('gong'); await banner(`<div class="hui">${es
 
 // ---------------------------------------------------------------- walking a road
 function explore(e) {
-  M = makeMap(e); scene = 'map'; music(THEMES[e.map.theme]?.music || 'road');
+  M = makeMap(e); const md = MIDS[e.id]; if (md && M.midAt && !(S.mids || {})[e.id]) M.mid = { ...M.midAt, id: md.foes[0] }; scene = 'map'; music(THEMES[e.map.theme]?.music || 'road');
   const p = S.pos || M.start; P.x = P.fx = p.x; P.y = P.fy = p.y; P.dir = p.dir || 'right'; P.trail = []; P.since = 0;
   const goal = e.boss ? 'lair' : e.map.goal || null;
   return new Promise((res) => { exploring = { e, goal, res }; busy = false; if (!S.pos) banner(esc(e.map.name), 1200); });
@@ -100,6 +100,7 @@ async function tryMove(dx, dy) {
   P.dir = dx > 0 ? 'right' : dx < 0 ? 'left' : dy > 0 ? 'down' : 'up';
   const x = P.x + dx, y = P.y + dy, E = exploring;
   if (x === M.end.x && y === M.end.y && E.goal) { await reachEnd(); return; }
+  if (M.mid && x === M.mid.x && y === M.mid.y) { await midFight(E.e); return; }
   if (blocked(M, x, y)) return;
   P.moving = true; P.trail.unshift({ x: P.x, y: P.y, dir: P.dir }); P.trail.length = 4;
   const fx0 = P.x, fy0 = P.y, tr0 = P.trail.map((q) => ({ ...q })), t0 = performance.now(); P.x = x; P.y = y;
@@ -107,16 +108,31 @@ async function tryMove(dx, dy) {
   P.moving = false; S.steps++; P.since++;
   if (S.steps % 12 === 0) save();
   const foes = E.e.map.foes || [];
+  if (M.mid && Math.abs(M.mid.x - P.x) + Math.abs(M.mid.y - P.y) <= 2) { P.since = 0; await midFight(E.e); return; } // the captain sees them coming
   if (foes.length && P.since > 7 && Math.random() < 1 / 15) { P.since = 0; await wildFight(E.e); }
 }
 async function wildFight(e) {
-  const R = rng(Date.now() >>> 0), n = R.int(1, party().length === 1 ? 2 : Math.min(4, party().length + 1 + (R() < 0.3 ? 1 : 0))), foes = Array.from({ length: n }, () => R.pick(e.map.foes));
+  // the demons of the road, and now and then the creatures of the country mixed in among them
+  const R = rng(Date.now() >>> 0), n = R.int(1, party().length === 1 ? 2 : Math.min(4, party().length + 1 + (R() < 0.3 ? 1 : 0))), local = e.map.foes.includes('天兵') ? [] : LOCAL[e.map.theme] || [];
+  const foes = Array.from({ length: n }, () => (local.length && R() < 0.35 ? R.pick(local) : R.pick(e.map.foes)));
   const r = await fight({ foes, lv: Math.max(1, epLv(S.ep) - 1 + R.int(-1, 1)), theme: e.map.theme, ep: e.id });
   if (r.end === 'lose') await gameOver(); else save();
+}
+// the captain of the road: words, a hard fight (no running from it), and something always left behind
+async function midFight(e) {
+  const md = MIDS[e.id], R = rng(hash(e.id + 'mid')), keep = Math.max(1, Math.min(md.foes.length, party().length + (S.guests || []).length)); save();
+  await say(lines(md.say), sayOpt());
+  const r = await fight({ foes: md.foes.slice(0, keep), lv: epLv(S.ep), theme: e.map.theme, ep: e.id, boss: true, hpK: 0.85 });
+  if (r.end === 'lose') { await gameOver(); return; }
+  (S.mids = S.mids || {})[e.id] = true; M.mid = null;
+  const tier = Math.min(3, Math.floor(S.ep / 14)), pool = (SHOP[Math.min(SHOP.length - 1, Math.floor(S.ep / 5) + 2)] || []).filter((k) => GEAR[k] && !S.gear.includes(k));
+  const got = R() < 0.5 && pool.length ? give(R.pick(pool)) : give(R.pick(CHEST[tier].filter((x) => x !== 'gold')));
+  sfx('chest'); toast(`${CAST[md.foes[0]]?.name || md.foes[0]}留下了：${got}`, 2600); save();
 }
 async function interact() {
   const d = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[P.dir], x = P.x + d[0], y = P.y + d[1], E = exploring, id = E.e.id;
   if (x === M.end.x && y === M.end.y && E.goal) return reachEnd();
+  if (M.mid && x === M.mid.x && y === M.mid.y) return midFight(E.e);
   const n = M.npcs.find((q) => q.x === x && q.y === y); if (n) return say([[n.who, n.text]], sayOpt());
   const r = M.rests.find((q) => q.x === x && q.y === y);
   if (r) { // rest: everyone (and the guests) whole again, every ill gone, the game saved

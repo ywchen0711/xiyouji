@@ -7,7 +7,7 @@ import { grid, OUT, mixC, dk, lt } from './px.js';
 import { CAST } from './data/cast.js';
 
 const GW = 32, GH = 40, S = 10, CACHE = new Map(), cx = 16;
-const SKIN = { y: '#eeaa74', w: '#f6c89c', r: '#d8704c', d: '#c48254', b: '#8a5a38', g: '#eeaa74', p: '#fcd6b8', gold: '#f0c04c', blue: '#6c94c8', green: '#86b46c', grey: '#d0ccc8' };
+const SKIN = { y: '#eeaa74', w: '#f6c89c', r: '#d8704c', d: '#c48254', b: '#8a5a38', g: '#eeaa74', p: '#fcd6b8', gold: '#f0c04c', blue: '#6c94c8', green: '#86b46c', grey: '#d0ccc8', bone: '#e8e0c8', ash: '#b8c4b0' };
 const HAIR = { red: '#c8401c', gold: '#e0a830', white: '#ece8e0', purple: '#7a3a8a' };
 const GROUND = { hero: '#ecd4a0', heaven: '#c4d2ee', buddha: '#f2e2a8', demon: '#d2b4cc', mortal: '#dcd2bc', dragon: '#b0d8d2', hell: '#c0c8b0', fox: '#e8bcc4' };
 const ROBE = { hero: '#8a5a2a', heaven: '#3a5a9a', buddha: '#c87a20', demon: '#5a3a5a', mortal: '#6a5a3a', dragon: '#2a6a6a', hell: '#3a4a3a', fox: '#8a3a4a' };
@@ -63,7 +63,7 @@ function body(G, p, L, R, o) {
 // ---------------------------------------------------------------- people
 function person(G, p, L, R) {
   const female = !!L.female, burly = p.wu >= 86 && !female, old = L.hair === 'white';
-  const monster = ['blue', 'green', 'r', 'grey'].includes(L.face) && p.side !== 'heaven';
+  const monster = ['blue', 'green', 'r', 'grey', 'bone', 'ash'].includes(L.face) && p.side !== 'heaven';
   const fierce = !female && (p.wu - p.zhi > 28 || ((p.side === 'demon' || p.side === 'hell') && p.wu >= p.zhi)), wise = p.zhi - p.wu > 25;
   const skin = SKIN[L.face] || SKIN.y, hair = HAIR[L.hair] || ['#2a2024', '#3a2a22', '#241c1c'][R.int(0, 2)];
   const rx = female ? 6.7 : burly ? 8.1 : 7.4, ry = 9.1, fcy = 19.6, hat = L.hat || (female ? 'female' : 'top');
@@ -107,6 +107,9 @@ function person(G, p, L, R) {
   if (L.urna) { G.set(15, 15, '#e84a30'); G.set(16, 15, '#e84a30'); }
   if (L.eye3) G.shape((x, y) => Math.abs(x - cx) < 1 && y > 13 && y < 16, (x, y) => (y === 14 ? '#c82020' : WHITE), { shade: false });
   hats(G, p, L, { hat, hair, skin, rx, head, old });
+  // the dead: a skull's hollow eyes and teeth; a jiangshi's yellow talisman
+  if (L.skull) { for (const x0 of [11, 18]) G.rect(x0, 17, 3, 4, '#2a1a1a'); G.set(12, 19, '#e83a2a'); G.set(19, 19, '#e83a2a'); G.rect(15, 21, 2, 2, '#2a1a1a'); for (let x = 12; x <= 19; x++) { G.set(x, 25, x % 2 ? WHITE : '#3a2a2a'); G.set(x, 26, '#3a2a2a'); } }
+  if (L.tag) { G.rect(14, 11, 4, 10, '#f0d040'); G.rect(14, 11, 4, 1, '#c8a020'); for (const y of [13, 15, 17, 19]) G.rect(15, y, 2, 1, '#c82a20'); }
 }
 
 function hats(G, p, L, o) {
@@ -130,6 +133,7 @@ function hats(G, p, L, o) {
     case 'crown': cap(13.5, hcol, 0.6, 3); G.shape((x, y) => (y > 9.5 && y < 12.5 && Math.abs(x - cx) < 6) || [11, 16, 21].some((t) => y > 6.5 && y <= 10 && Math.abs(x - t) < 1.5 - (10 - y) * 0.15), GOLD); G.set(16, 10, '#e84a3a'); G.set(15, 10, '#e84a3a'); break;
     case 'helm': { const m = p.side === 'heaven' ? '#d8a840' : '#8e8e9c', low = L.eye3 ? 12.6 : 14.4; G.shape((x, y) => head(x, y, 1.1) && y < low, (x, y) => (Math.floor(y) === Math.floor(low - 0.1) ? dk(m, 0.25) : Math.abs(x + 0.5 - cx) < 1 ? lt(m, 0.35) : m)); G.rect(15, 6, 2, 3, GOLD); G.ell(cx, 4.6, 2.2, 2, '#d83a2a'); break; }
     case 'band': cap(13.5, hcol, 0.6, 4); G.shape((x, y) => head(x, y, 0.8) && y > 12 && y < 14, L.bandC || '#c83a2a'); stroke(G, [[cx + rx, 13], [cx + rx + 3, 17]], 0.7, L.bandC || '#c83a2a'); break;
+    case 'tall': { const hc = L.hatC || WHITE; G.shape((x, y) => (head(x, y, 0.6) && y < 13.5) || (y > 0 && y < 13 && Math.abs(x - cx) < 1.2 + (y - 0.5) * 0.46), (x, y) => (Math.abs(x + 0.5 - cx) < 1.1 && y > 3 && y < 12 && y % 2 === 0 ? (hc === WHITE ? '#2a2024' : '#e8e0d0') : hc)); break; }
     case 'hair': case 'horns':
       G.shape((x, y) => (head(x, y, 1) && y < 14) || (y > 3 && y < 14 && x > 6 && x < 26 && y > 4 + Math.abs(((x * 0.7) % 3) - 1.5) * 3.4 + Math.abs(x - cx) * 0.35), hcol);
       G.shape((x, y) => head(x, y, 1.4) && !head(x, y, -0.3) && y > 12 && y < 22, hcol);
@@ -177,11 +181,17 @@ export const SPECIES = {
   mouse:  { fur: '#eae6e2', pale: '#fff8f8', eye: '#c83040', hw: 25, hh: 28, mz: 0.7, mw: 10, nose: 'mouse', ears: 'mouse', whisk: true, big: true },
   dog:    { fur: '#3a3a3a', pale: '#d0c8b8', eye: '#e8a020', hw: 26, hh: 31, mz: 0.95, mw: 11, nose: 'pad', ears: 'tall', fang: 'down', slant: true },
   turtle: { fur: '#6a7a44', pale: '#d0c890', eye: '#2a1a08', hw: 25, hh: 28, mz: 0.45, mw: 13, nose: 'slit', ears: 'none', pattern: 'scale', small: true },
+  bat:    { fur: '#4a3a4a', pale: '#8a7480', eye: '#e83a2a', hw: 26, hh: 28, mz: 0.4, mw: 10, nose: 'pig', ears: 'bat', fang: 'down', slant: true },
+  goat:   { fur: '#e8e2d6', pale: '#fffaf0', eye: '#c8a020', hw: 25, hh: 31, mz: 0.85, mw: 10, nose: 'slit', ears: 'leaf', horns: 'ram', slit: true, beard: true },
+  rabbit: { fur: '#f2eeea', pale: '#fff8f8', eye: '#d83040', hw: 26, hh: 28, mz: 0.5, mw: 10, nose: 'mouse', ears: 'bunny', fang: 'buck', big: true, whisk: true },
+  toad:   { fur: '#6a8a3a', pale: '#d8d090', eye: '#e8c020', hw: 33, hh: 26, mz: 0.2, mw: 18, nose: 'slit', ears: 'none', pattern: 'spot', big: true, slit: true },
+  cat:    { fur: '#8a8a84', pale: '#e8e4dc', eye: '#90d040', hw: 27, hh: 29, mz: 0.45, mw: 11, nose: 'pad', ears: 'point', pattern: 'stripe', whisk: true, slant: true, slit: true },
+  insect: { fur: '#d8a830', pale: '#3a2a1a', eye: '#d83a2a', hw: 26, hh: 28, mz: 0.25, mw: 9, nose: 'none', ears: 'antenna', pattern: 'scale', fang: 'pincer', big: true },
   hou:    { fur: '#e8b844', pale: '#fcecc0', eye: '#e84020', hw: 30, hh: 31, mz: 0.65, mw: 15, nose: 'pad', ears: 'point', mane: true, fang: 'down', horns: 'one', slant: true },
 };
 
 function beast(G, p, L, R) {
-  const base = SPECIES[L.species] || SPECIES.wolf, sp = { ...base, ...(L.fur ? { fur: L.fur } : {}), ...(L.pale ? { pale: L.pale } : {}), ...(L.eye ? { eye: L.eye } : {}), ...(L.horns ? { horns: L.horns } : {}) };
+  const base = SPECIES[L.species] || SPECIES.wolf, sp = { ...base, ...(L.fur ? { fur: L.fur } : {}), ...(L.pale ? { pale: L.pale } : {}), ...(L.eye ? { eye: L.eye } : {}), ...(L.skin ? { skin: L.skin } : {}), ...(L.horns ? { horns: L.horns } : {}) };
   const fur = sp.fur, pale = sp.pale, skin = sp.skin || pale, hcy = 19.4;
   const rx = Math.max(6.6, Math.min(9.6, sp.hw * 0.29)), ry = Math.max(7.6, Math.min(9.6, sp.hh * 0.285)), top = hcy - ry;
   const head = (x, y, e = 0) => { const dy = (y - hcy) / (ry + e); let k = dy > 0 ? (sp.jowl ? 1 + 0.08 * dy : L.species === 'bird' ? 1 - 0.32 * dy * dy : 1 - 0.18 * dy * dy) : 1; if (sp.fluff && dy > -0.1 && dy < 0.75 && Math.floor(y) % 2 === 0) k += 0.1; return ((x - cx) / ((rx + e) * k)) ** 2 + dy * dy <= 1; };
@@ -197,6 +207,7 @@ function beast(G, p, L, R) {
   if (L.heads) for (let i = 0; i < Math.min(4, L.heads); i++) { const hx = [6, 26, 4.5, 27.5][i], hy = [9, 9, 18, 18][i]; G.ell(hx, hy, 3.4, 3.2, furC); G.set(hx - 1.5, hy - 0.5, sp.eye); G.set(hx + 0.5, hy - 0.5, sp.eye); if (sp.nose === 'beak') G.rect(hx - 0.5, hy + 1, 1, 2, '#e8b830'); else G.rect(hx - 1, hy + 1, 2, 1, pale); }
   if (sp.mane === true) { const mc = dk(fur, 0.28); G.shape((x, y) => { const a = Math.atan2(y - hcy, x - cx); return ((x - cx) / (rx + 3.6)) ** 2 + ((y - hcy - 1) / (ry + 3.4)) ** 2 <= 1 + 0.2 * Math.sin(a * 11); }, (x, y) => ((x + y) % 3 === 0 ? dk(mc, 0.15) : mc)); }
   if (sp.mane === 'fin') for (const sd of [-1, 1]) stroke(G, [[cx + sd * (rx - 1), hcy + 2], [cx + sd * (rx + 4), hcy + 6], [cx + sd * (rx + 2), hcy + 10]], 1.3, lt(fur, 0.2));
+  if (L.wings) for (const sd of [-1, 1]) { const wc = L.wings === true ? dk(fur, 0.15) : L.wings; G.poly([[cx + sd * 6, 24], [cx + sd * 15.5, 10], [cx + sd * 15.5, 30], [cx + sd * 12, 27], [cx + sd * 10, 33], [cx + sd * 7, 30]], wc); for (const t of [[13, 26], [15, 18]]) G.line(cx + sd * 7, 26, cx + sd * t[0], t[1], dk(wc, 0.3)); }
   body(G, p, L, R, { burly: sp.hw >= 31, armour: !!L.armour, skin: pale, female: false });
   if (!L.robe && !L.armour) G.ell(cx, 40, 6, 5.5, pale, { shade: false });
   G.shape((x, y) => y > 26 && y < 32 && Math.abs(x - cx) < 4, dk(fur, 0.1));
@@ -209,6 +220,9 @@ function beast(G, p, L, R) {
   if (e === 'big') for (const sd of [-1, 1]) { G.ell(cx + sd * (rx + 2.6), hcy + 1, 4.6, 7.6, fur); G.ell(cx + sd * (rx + 3), hcy + 1, 2.6, 5.2, '#d8a8a4', { out: false }); }
   if (e === 'leaf') eL([[cx - rx + 2, top + 4], [cx - rx - 5, top], [cx - rx + 1, top + 6.5]], fur);
   if (e === 'fin') eL([[cx - rx + 1, hcy - 3], [cx - rx - 5, hcy - 7], [cx - rx - 3, hcy - 3], [cx - rx - 6, hcy], [cx - rx + 0.5, hcy + 3]], lt(pale, 0.1));
+  if (e === 'bat') { eL([[cx - rx + 0.5, top + 5], [cx - rx - 3.5, top - 6], [cx - rx + 5.5, top + 1.6]], fur); eL([[cx - rx + 1.6, top + 3.6], [cx - rx - 1.6, top - 3], [cx - rx + 4, top + 1.8]], '#d88a94', { out: false, shade: false }); }
+  if (e === 'bunny') for (const sd of [-1, 1]) { G.shape((x, y) => ((x - (cx + sd * 3.2)) / 2.2) ** 2 + ((y - (top - 4)) / 7.2) ** 2 <= 1, fur); G.shape((x, y) => ((x - (cx + sd * 3.2)) / 0.9) ** 2 + ((y - (top - 4)) / 5.6) ** 2 <= 1, '#f0b0b8', { out: false, shade: false }); }
+  if (e === 'antenna') for (const sd of [-1, 1]) { stroke(G, [[cx + sd * 2.5, top + 2], [cx + sd * 5, top - 4], [cx + sd * 8, top - 7]], 0.5, OUT, { out: false }); G.ell(cx + sd * 8, top - 7, 1.4, 1.4, sp.eye); }
   if (e === 'mouse') for (const sd of [-1, 1]) { G.ell(cx + sd * (rx - 0.8), top + 0.4, 3.8, 3.6, fur); G.ell(cx + sd * (rx - 0.8), top + 0.6, 2.2, 2.1, '#f0b0b8', { out: false, shade: false }); }
   // the head
   G.shape((x, y) => head(x, y), furC);
@@ -238,6 +252,9 @@ function beast(G, p, L, R) {
   if (sp.fang === 'down') { G.set(cx - 2, mY + 1, WHITE); G.set(cx + 1, mY + 1, WHITE); }
   if (sp.fang === 'up') { const y = n === 'pig' ? Math.round(hcy + 6.4) : mY; for (const x of [12, 19]) { G.set(x, y, WHITE); G.set(x, y - 1, WHITE); } }
   if (sp.fang === 'row') for (let x = Math.round(cx - mx); x < Math.round(cx + mx); x += 2) G.set(x, mY + 1, WHITE);
+  if (sp.fang === 'buck') { G.rect(15, mY + 1, 2, 2, WHITE); G.set(15, mY + 3, OUT); G.set(16, mY + 3, OUT); }
+  if (sp.fang === 'pincer') for (const sd of [-1, 1]) stroke(G, [[cx + sd * 2.5, mY], [cx + sd * 4.5, mY + 3], [cx + sd * 1.5, mY + 5]], 0.7, '#2a1a10', { out: false });
+  if (sp.beard) G.shape((x, y) => y > hcy + ry - 1.5 && y < hcy + ry + 5 && Math.abs(x + 0.5 - cx) < 2.4 - (y - hcy - ry) * 0.42, lt(pale, 0.15));
   if (sp.tongue) { G.rect(15, mY + 1, 2, 2, '#d82a3a'); G.set(14, mY + 3, '#d82a3a'); G.set(17, mY + 3, '#d82a3a'); }
   if (sp.whisk) for (const sd of [-1, 1]) for (const dy of [0, 2]) G.line(cx + sd * (mw + 0.5), my + dy - 1, cx + sd * (mw + 4.5), my + dy - 2 + dy * 0.5, OUT);
   if (sp.barbel) for (const sd of [-1, 1]) stroke(G, [[cx + sd * mw, my], [cx + sd * (mw + 4), my + 2], [cx + sd * (mw + 5.5), my + 7]], 0.55, lt(pale, 0.1), { out: false });
@@ -250,7 +267,7 @@ function beast(G, p, L, R) {
   if (h === 'deer' || h === 'dragon') { const hc = h === 'dragon' ? '#e8c860' : '#a8885a'; for (const pts of [[[cx - 3.5, top + 2], [cx - 5, top - 3], [cx - 7, top - 7]], [[cx - 5, top - 3], [cx - 9, top - 4.5]], [[cx - 6, top - 5.5], [cx - 4, top - 9]]]) { stroke(G, pts, 0.8, hc); stroke(G, mir(pts), 0.8, hc); } }
   if (h === 'rhino') G.poly([[cx - 2, mt + 1], [cx + 2, mt + 1], [cx + 0.6, mt - 5.5], [cx - 0.6, mt - 5.5]], hornC);
   if (h === 'one') G.poly([[cx - 1.8, top + 3.5], [cx + 1.8, top + 3.5], [cx + 0.4, top - 5], [cx - 0.4, top - 5]], hornC);
-  if (h === 'ram') for (const sd of [-1, 1]) { const hx = cx + sd * (rx - 0.5), hy = top + 4; G.shape((x, y) => { const d = Math.hypot(x - hx, y - hy); return d < 4.3 && d > 1.6; }, (x, y) => (Math.hypot(x + 0.5 - hx, y + 0.5 - hy) < 2.9 ? dk(BONE, 0.2) : BONE)); }
+  if (h === 'ram') for (const sd of [-1, 1]) { const hx = cx + sd * (rx + 0.6), hy = top + 4.6; G.shape((x, y) => { const d = Math.hypot(x - hx, y - hy); return d < 4 && d > 1.5 && (x - cx) * sd > rx - 2.4; }, (x, y) => (Math.hypot(x + 0.5 - hx, y + 0.5 - hy) < 2.9 ? dk(BONE, 0.2) : BONE)); }
   if (sp.crest) for (const [tx, ty, c] of [[cx - 4, top - 4, lt(fur, 0.2)], [cx + 4, top - 4, lt(fur, 0.2)], [cx, top - 6.5, '#d83a2a']]) stroke(G, [[cx, top + 2], [tx, ty]], (t) => 1.6 - t, c);
   if (L.cap) G.shape((x, y) => head(x, y, 0.6) && y < top + 4.2, L.cap);
   if (L.circlet) G.shape((x, y) => head(x, y, 0.3) && y > top + 3.5 && y < top + 5.5, (x, y) => (Math.abs(x + 0.5 - cx) < 1 ? '#e84a3a' : GOLD));

@@ -269,10 +269,10 @@ function lookOf(id, col) {
   const c = CAST[id], L = c?.look || {}, robe = col || (L.robe && L.robe.startsWith('#') ? L.robe : L.robe === 'kasaya' ? '#c0382a' : '#6a5a3a');
   if (!c) return { skin: '#eeaa74', hair: '#2a2024', style: 'top', robe, legs: '#3a3020' };
   if (c.beast) return { skin: L.fur || '#8a6a4a', hair: dk(L.fur || '#8a6a4a', 0.3), style: 'beast', robe, legs: '#3a3020' };
-  const skin = { y: '#eeaa74', w: '#f6c89c', r: '#d8704c', d: '#c48254', p: '#fcd6b8', gold: '#f0c04c', blue: '#6c94c8', green: '#86b46c', grey: '#d0ccc8' }[L.face] || '#eeaa74';
+  const skin = { y: '#eeaa74', w: '#f6c89c', r: '#d8704c', d: '#c48254', p: '#fcd6b8', gold: '#f0c04c', blue: '#6c94c8', green: '#86b46c', grey: '#d0ccc8', bone: '#e8e0c8', ash: '#b8c4b0' }[L.face] || '#eeaa74';
   const hair = L.hair === 'white' ? '#ece8e0' : L.hair === 'red' ? '#c8401c' : L.hair === 'gold' ? '#e0a830' : L.hair === 'purple' ? '#7a3a8a' : '#2a2024';
-  const style = L.female ? 'bun' : ['monk', 'vinu', 'buddha', 'child'].includes(L.hat) ? 'monk' : L.hat === 'helm' ? 'helm' : ['official', 'scholar', 'emperor', 'crown'].includes(L.hat) ? 'hat' : L.hat === 'scarf' || L.hat === 'bodhi' ? 'hood' : 'top';
-  return { skin, hair, style, robe, legs: dk(robe, 0.35), beard: L.beard === 'long' || L.beard === 'full' ? hair : null, hoodC: L.hat === 'bodhi' ? '#f8f6f0' : '#b8a07a' };
+  const style = L.female ? 'bun' : ['monk', 'vinu', 'buddha', 'child'].includes(L.hat) ? 'monk' : L.hat === 'helm' ? 'helm' : ['official', 'scholar', 'emperor', 'crown'].includes(L.hat) ? 'hat' : L.hat === 'scarf' || L.hat === 'bodhi' ? 'hood' : L.hat === 'tall' ? 'tall' : 'top';
+  return { skin, hair, style, robe, legs: dk(robe, 0.35), beard: L.beard === 'long' || L.beard === 'full' ? hair : null, hoodC: L.hat === 'bodhi' ? '#f8f6f0' : L.hat === 'tall' ? L.hatC || '#f8f6f0' : '#b8a07a' };
 }
 export function walker(id, dir, step, opt = {}) {
   const L = lookOf(id, opt.col);
@@ -312,6 +312,7 @@ function figure(L, dir, step) {
     case 'helm': top(hy - 1, '#9a9aa8'); G.rect(hx - 0.5, hy - 7, 1, 2, '#d83a2a'); break;
     case 'hat': top(hy - 1.5, '#2a2228'); G.rect(hx - 3, hy - 6, 6, 2, '#2a2228'); break;
     case 'hood': top(hy - 0.5, L.hoodC); break;
+    case 'tall': top(hy - 1.5, L.hoodC); G.poly([[hx - 3.5, hy - 3], [hx + 3.5, hy - 3], [hx + 0.6, hy - 10], [hx - 0.6, hy - 10]], L.hoodC); break;
     case 'beast': G.poly([[hx - 4, hy - 2], [hx - 3, hy - 7], [hx - 1, hy - 3]], L.hair); G.poly([[hx + 4, hy - 2], [hx + 3, hy - 7], [hx + 1, hy - 3]], L.hair); if (!back) { G.set(hx - 2, hy, '#f0c020'); G.set(hx + 2, hy, '#f0c020'); G.rect(hx - 1, hy + 2, 2, 1, '#e8e0cc'); } break;
     case 'monk': if (L.hair && L.hair !== '#ece8e0' && L.beard) { for (const s of [-1, 1]) G.rect(hx + s * 4 - (s > 0 ? 0 : 1), hy - 1, 2, 4, L.hair); } G.set(hx - 2, hy - 3, lt(L.skin, 0.4)); break;
   }
