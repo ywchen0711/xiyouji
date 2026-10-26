@@ -4,6 +4,7 @@
 // when signed in to the game hub).
 import { STORY, MEMBERS, SKILLS, ITEMS, GEAR, SHOP, CHEST, NAN, ORDER, MIDS, LOCAL } from './data/game.js';
 import { CAST } from './data/cast.js';
+import { SECRETS, RIDDLES } from './data/secrets.js';
 import { newUnit, setLevel, stats, epLv, expNeed, canWear } from './rules.js';
 import { Battle } from './battle.js';
 import { makeMap, drawMap, blocked, restKind, TS } from './field.js';
@@ -15,12 +16,13 @@ import { rng, hash, clamp, esc, wait } from './util.js';
 const KEY = 'xiyouji.v1', GAME = 'xiyouji', LW = 384, LH = 224, K = 3;
 const cv = $('cv'), g = cv.getContext('2d'); cv.width = LW * K; cv.height = LH * K;
 let S = null, scene = 'title', busy = false, cloud = null, battle = null, M = null, stageBg = 'heaven', exploring = null;
+let inSecret = null; // the hidden place the pilgrims are in, if any (its progress is not kept: a reload puts them back at its door)
 const P = { x: 0, y: 0, fx: 0, fy: 0, dir: 'right', step: 0, trail: [], from: [], fdir: [], k: 1, endT: 0, since: 0, moving: false };
 const RETRY = Symbol('retry');
 
 // ---------------------------------------------------------------- the journey's state
 const fresh = () => ({ v: 1, ep: 0, phase: 'intro', stage: 0, started: -1, units: {}, party: [], guests: [], names: {}, items: { 仙桃: 3 }, gear: [], gold: 60, flags: {}, nan: [], opened: {}, pos: null, sound: true, steps: 0, battles: 0 });
-function save() { if (!S) return; if (M && scene === 'map') S.pos = { x: P.x, y: P.y, dir: P.dir }; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} if (cloud) cloud.touch(GAME, KEY); }
+function save() { if (!S) return; if (M && scene === 'map' && !inSecret) S.pos = { x: P.x, y: P.y, dir: P.dir }; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} if (cloud) cloud.touch(GAME, KEY); }
 function load() { try { const v = JSON.parse(localStorage.getItem(KEY)); if (v && v.units) return { ...fresh(), ...v }; } catch (e) {} return null; }
 const party = () => ORDER.filter((id) => S.party.includes(id));
 const unit = (id) => S.units[id];
@@ -40,7 +42,7 @@ function learn(map) { for (const [id, list] of Object.entries(map || {})) { cons
 function draw(t) {
   g.setTransform(K, 0, 0, K, 0, 0); g.imageSmoothingEnabled = false;
   if (scene === 'battle' && battle) { battle.render(g, t); return; }
-  if (scene === 'map' && M) { const cam = { x: clamp(P.fx * TS + 8 - LW / 2, 0, M.w * TS - LW), y: clamp(P.fy * TS + 8 - LH / 2, 0, M.h * TS - LH) }; drawMap(g, M, cam, walkers(), t, { opened: S.opened[STORY[S.ep]?.id] || [], goal: exploring?.goal }); return; }
+  if (scene === 'map' && M) { const cam = { x: clamp(P.fx * TS + 8 - LW / 2, 0, M.w * TS - LW), y: clamp(P.fy * TS + 8 - LH / 2, 0, M.h * TS - LH) }; drawMap(g, M, cam, walkers(), t, { opened: S.opened[(inSecret || STORY[S.ep])?.id] || [], goal: inSecret ? 'lair' : exploring?.goal, inSecret: !!inSecret }); return; }
   g.imageSmoothingEnabled = false; g.drawImage(backdrop(stageBg, S && STORY[S.ep]?.id), 0, 0, LW, LH);
   if (scene === 'title') { const k = t / 4000; g.fillStyle = 'rgba(255,240,200,0.1)'; for (let i = 0; i < 6; i++) { g.beginPath(); g.ellipse(((i * 80 + k * 30) % 460) - 40, 150 + Math.sin(i) * 20, 60, 10, 0, 0, 7); g.fill(); } }
   if (scene === 'story') { g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(0, 0, LW, LH); }
@@ -93,7 +95,9 @@ async function chapterCard(e) { sfx('gong'); await banner(`<div class="hui">${es
 
 // ---------------------------------------------------------------- walking a road
 function explore(e) {
-  M = makeMap(e); const md = MIDS[e.id]; if (md && M.midAt && !(S.mids || {})[e.id]) M.mid = { ...M.midAt, id: md.foes[0] }; scene = 'map'; music(THEMES[e.map.theme]?.music || 'road');
+  inSecret = null; M = makeMap(e); const md = MIDS[e.id]; if (md && M.midAt && !(S.mids || {})[e.id]) M.mid = { ...M.midAt, id: md.foes[0] };
+  const sd = SECRETS.find((q) => q.ep === e.id); if (sd && M.secretAt && !(S.secrets || {})[sd.id]) { M.secret = { ...M.secretAt, d: sd }; setTimeout(() => toast('這一帶似乎藏著甚麼……留意路旁的微光。', 2600), 1500); }
+  scene = 'map'; music(THEMES[e.map.theme]?.music || 'road');
   const p = S.pos || M.start; P.x = P.fx = p.x; P.y = P.fy = p.y; P.dir = p.dir || 'right'; P.trail = [0, 1, 2, 3].map(() => ({ x: p.x, y: p.y })); P.from = []; P.fdir = []; P.k = 1; P.since = 0;
   const goal = e.boss ? 'lair' : e.map.goal || null;
   return new Promise((res) => { exploring = { e, goal, res }; busy = false; if (!S.pos) banner(esc(e.map.name), 1200); });
@@ -101,6 +105,7 @@ function explore(e) {
 async function tryMove(dx, dy) {
   P.dir = dx > 0 ? 'right' : dx < 0 ? 'left' : dy > 0 ? 'down' : 'up';
   const x = P.x + dx, y = P.y + dy, E = exploring;
+  if (inSecret && x === M.end.x && y === M.end.y) { await secretTrial(); return; }
   if (x === M.end.x && y === M.end.y && E.goal) { await reachEnd(); return; }
   if (M.mid && x === M.mid.x && y === M.mid.y) { await midFight(E.e); return; }
   if (blocked(M, x, y)) return;
@@ -110,9 +115,10 @@ async function tryMove(dx, dy) {
   await new Promise((res) => { const f = (now) => { const k = Math.max(0, Math.min(1, (now - t0) / 170)); P.k = k; P.fx = fx0 + dx * k; P.fy = fy0 + dy * k; if (k < 1) requestAnimationFrame(f); else res(); }; f(performance.now()); });
   P.endT = t0 + 170; P.k = 1; P.moving = false; S.steps++; P.since++;
   if (S.steps % 12 === 0) save();
-  const foes = E.e.map.foes || [];
+  if (!inSecret && M.secret && P.x === M.secret.x && P.y === M.secret.y) { await secretEnter(M.secret.d); return; }
+  const here = inSecret || E.e, foes = here.map.foes || [];
   if (M.mid && Math.abs(M.mid.x - P.x) + Math.abs(M.mid.y - P.y) <= 2) { P.since = 0; await midFight(E.e); return; } // the captain sees them coming
-  if (foes.length && P.since > 7 && Math.random() < 1 / 15) { P.since = 0; await wildFight(E.e); }
+  if (foes.length && P.since > 7 && Math.random() < 1 / 15) { P.since = 0; await wildFight(here); }
 }
 async function wildFight(e) {
   // the demons of the road, and now and then the creatures of the country mixed in among them
@@ -132,9 +138,42 @@ async function midFight(e) {
   const got = R() < 0.5 && pool.length ? give(R.pick(pool)) : give(R.pick(CHEST[tier].filter((x) => x !== 'gold')));
   sfx('chest'); toast(`${CAST[md.foes[0]]?.name || md.foes[0]}留下了：${got}`, 2600); save();
 }
+// ---------------------------------------------------------------- the hidden places (秘境)
+async function secretEnter(d) {
+  sfx('chest'); const go = await confirm(`路旁的草叢後面，竟有一條隱密的小徑。要進去「${d.name}」看看嗎？`); if (!go) return;
+  save(); inSecret = d; M = makeMap({ id: d.id, map: d.map }); P.x = P.fx = M.start.x; P.y = P.fy = M.start.y; P.dir = 'right'; P.trail = [0, 1, 2, 3].map(() => ({ x: P.x, y: P.y })); P.from = []; P.k = 1; P.since = 0;
+  music(THEMES[d.map.theme]?.music || 'cave'); await banner(`秘境　${esc(d.name)}`, 1400, 'chapter'); if (d.intro) await say(lines(d.intro), sayOpt());
+  toast(trialText(d.trial), 3200);
+}
+const trialText = (T) => [T.waves ? `連戰 ${T.waves.length} 陣，中間不能歇息` : '', T.riddle ? `先答 ${T.riddle} 道題，答錯會遭埋伏` : '', T.limit ? `${T.limit} 回合內獲勝` : '', T.solo ? `只有${MEMBERS[T.solo].name}一人應戰` : '', T.seal ? '法術全被封住' : ''].filter(Boolean).join('；') || '打倒守關的妖怪';
+// the trial at the end of the hidden place; losing it only sends them back to the road
+async function secretTrial() {
+  const d = inSecret, T = d.trial, R = rng(hash(d.id + S.battles)), lv = epLv(S.ep) + 1;
+  await say([['-', '秘境的盡頭，就是試煉之地。'], ['-', `試煉：${trialText(T)}。`]], sayOpt());
+  if (T.riddle) { const pool = [...RIDDLES].sort(() => R() - 0.5).slice(0, T.riddle);
+    for (const [q, ...ans] of pool) { const opts = ans.map((a, i) => ({ label: a, value: i })).sort(() => R() - 0.5); const v = await menu(opts, { title: q, noCancel: true });
+      if (v === 0) { sfx('ok'); toast('答對了！'); } else { sfx('down'); toast(`答錯了！正確答案是「${ans[0]}」——有埋伏！`, 2200); const r = await fight({ foes: Array.from({ length: Math.min(3, party().length) }, () => R.pick(d.map.foes)), lv, theme: d.map.theme, ep: d.id }); if (r.end === 'lose') return secretLeave(false); } } }
+  const waves = T.waves || [T.foes];
+  for (const [i, foes] of waves.entries()) {
+    if (waves.length > 1) await banner(`第 ${i + 1} 陣`, 900, 'boss');
+    const r = await fight({ foes, lv, theme: d.map.theme, ep: d.id, boss: true, hpK: 0.9, limit: T.limit, sealAll: T.seal, party: T.solo ? [T.solo] : undefined });
+    if (r.end !== 'win') { if (r.end === 'timeout') await say([['-', '妖怪趁機溜走了，試煉沒有成功。下次再來罷。']], sayOpt()); return secretLeave(false); }
+  }
+  (S.secrets = S.secrets || {})[d.id] = true; const got = give(d.reward); sfx('revive');
+  await banner(`試煉成功！<br><small>得到了秘寶「${esc(got)}」</small>`, 2200, 'chapter'); toast(`得到秘寶：${got}（${gearDesc(d.reward)}）`, 3600);
+  return secretLeave(true);
+}
+async function secretLeave(won) {
+  if (!won) for (const u of Object.values(S.units)) { const s2 = stats(u, S.flags); u.hp = Math.max(u.hp, Math.round(s2.hp * 0.3)); }
+  const e = exploring.e; inSecret = null; M = makeMap(e); const md = MIDS[e.id]; if (md && M.midAt && !(S.mids || {})[e.id]) M.mid = { ...M.midAt, id: md.foes[0] };
+  const sd = SECRETS.find((q) => q.ep === e.id); if (sd && M.secretAt && !(S.secrets || {})[sd.id]) M.secret = { ...M.secretAt, d: sd };
+  const p = S.pos || M.start; P.x = P.fx = p.x; P.y = P.fy = p.y; P.trail = [0, 1, 2, 3].map(() => ({ x: p.x, y: p.y })); P.from = []; P.k = 1; P.since = 0;
+  music(THEMES[e.map.theme]?.music || 'road'); banner(won ? '回到了原來的路上' : '被趕出了秘境……', 1200); save();
+}
 async function interact() {
-  const d = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[P.dir], x = P.x + d[0], y = P.y + d[1], E = exploring, id = E.e.id;
-  if (x === M.end.x && y === M.end.y && E.goal) return reachEnd();
+  const d = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[P.dir], x = P.x + d[0], y = P.y + d[1], E = exploring, id = (inSecret || E.e).id;
+  if (inSecret && x === M.end.x && y === M.end.y) return secretTrial();
+  if (!inSecret && x === M.end.x && y === M.end.y && E.goal) return reachEnd();
   if (M.mid && x === M.mid.x && y === M.mid.y) return midFight(E.e);
   const n = M.npcs.find((q) => q.x === x && q.y === y); if (n) return say([[n.who, n.text]], sayOpt());
   const r = M.rests.find((q) => q.x === x && q.y === y);
@@ -144,8 +183,8 @@ async function interact() {
     await banner(k === 'censer' ? '焚一爐清香，靜坐片刻，眾人氣血調和。<br><small>兵氣、法力全滿，已記錄進度。</small>' : k === 'lotus' ? '金蓮放光，照得眾人神清氣爽。<br><small>兵氣、法力全滿，已記錄進度。</small>' : '一汪靈泉，清冽甘甜，眾人掬水而飲，精神百倍。<br><small>兵氣、法力全滿，已記錄進度。</small>', 1700);
     save(); return; }
   const c = M.chests.find((q) => q.x === x && q.y === y), key = x + ',' + y;
-  if (c && !(S.opened[id] || []).includes(key)) { (S.opened[id] = S.opened[id] || []).push(key); sfx('chest'); const R = rng(hash(id + key)), tier = Math.min(3, Math.floor(S.ep / 14)); let got;
-    if (R() < 0.22) { const pool = (SHOP[Math.min(SHOP.length - 1, Math.floor(S.ep / 5) + 2)] || []).filter((k) => GEAR[k]); got = pool.length ? give(R.pick(pool)) : null; }
+  if (c && !(S.opened[id] || []).includes(key)) { (S.opened[id] = S.opened[id] || []).push(key); sfx('chest'); const R = rng(hash(id + key)), tier = Math.min(3, Math.floor(S.ep / 14) + (inSecret ? 1 : 0)); let got;
+    if (R() < (inSecret ? 0.5 : 0.22)) { const pool = (SHOP[Math.min(SHOP.length - 1, Math.floor(S.ep / 5) + 2)] || []).filter((k) => GEAR[k]); got = pool.length ? give(R.pick(pool)) : null; }
     if (!got) { const it = R.pick(CHEST[tier]); if (it === 'gold') { const n = Math.round((30 + S.ep * 40) * (0.7 + R() * 0.6)); S.gold += n; got = `銀兩 ${n}`; } else got = give(it); }
     toast(`寶箱裡有：${got}`); save(); }
 }
@@ -172,7 +211,7 @@ async function fight(o) {
   const ids = (o.party || party()).filter((id) => S.units[id]), guestIds = [...new Set([...(S.guests || []), ...(o.guest || [])])], guestUnits = {};
   for (const id of guestIds) { guestUnits[id] = newUnit(id, Math.max(1, epLv(S.ep) + 2)); }
   for (const id of ids) { const u = S.units[id]; if (u.hp <= 0 && o.boss) u.hp = 1; }
-  battle = new Battle({ S, faceFor, party: [...ids, ...guestIds], guestUnits, foes: o.foes, lv: o.lv, theme: o.theme, ep: o.ep, boss: o.boss, scripted: o.scripted, hpK: o.hpK });
+  battle = new Battle({ S, faceFor, party: [...ids, ...guestIds], guestUnits, foes: o.foes, lv: o.lv, theme: o.theme, ep: o.ep, boss: o.boss, scripted: o.scripted, hpK: o.hpK, limit: o.limit, sealAll: o.sealAll });
   const r = await battle.run(); battle = null; scene = prev === 'battle' ? 'map' : prev; music(THEMES[stageBg]?.music || 'road');
   if (r.end !== 'lose') for (const id of ids) { const u = S.units[id]; if (u.hp <= 0) u.hp = 1; }
   return r;
@@ -205,7 +244,8 @@ async function shop(tier) {
     if (c === 'sell') for (;;) { const items = [...Object.entries(S.items).filter(([k, n]) => n > 0 && ITEMS[k].price).map(([k, n]) => ({ label: ITEMS[k].name, hint: `×${n}　${Math.floor(ITEMS[k].price / 2)}`, value: 'i:' + k })), ...[...new Set(S.gear)].filter((k) => GEAR[k].price).map((k) => ({ label: GEAR[k].name, hint: `×${S.gear.filter((x) => x === k).length}　${Math.floor(GEAR[k].price / 2)}`, value: 'g:' + k }))]; if (!items.length) { toast('沒有可以賣的東西。'); break; } const v = await menu(items, { title: `賣甚麼？（銀兩 ${S.gold}）`, cls: 'shop' }); if (!v) break; const [t, k] = v.split(':'); if (t === 'i') { S.items[k]--; S.gold += Math.floor(ITEMS[k].price / 2); } else { S.gear.splice(S.gear.indexOf(k), 1); S.gold += Math.floor(GEAR[k].price / 2); } sfx('coin'); save(); }
   }
 }
-const gearDesc = (k) => { const G = GEAR[k], parts = []; for (const [s, n] of [['atk', '攻'], ['def', '防'], ['mag', '法'], ['spd', '速'], ['hp', '兵氣'], ['mp', '法力']]) if (G[s]) parts.push(`${n}+${G[s]}`); if (G.res) parts.push({ fire: '抗火', water: '抗水' }[G.res]); if (G.ward) parts.push({ poison: '防毒', seal: '防封', blind: '防盲', stun: '防定身' }[G.ward]); if (G.who) parts.push(`限${G.who.map((w) => MEMBERS[w].name).join('、')}`); return `${G.slot === 'body' ? '衣甲' : '飾物'}：${parts.join('　')}`; };
+const SLOT = { body: '衣甲', acc: '飾物', head: '頭冠', feet: '鞋履' };
+const gearDesc = (k) => { const G = GEAR[k], parts = []; for (const [s, n] of [['atk', '攻'], ['def', '防'], ['mag', '法'], ['spd', '速'], ['hp', '兵氣'], ['mp', '法力']]) if (G[s]) parts.push(`${n}+${G[s]}`); if (G.crit) parts.push(`會心+${Math.round(G.crit * 100)}%`); if (G.regen) parts.push(`每回合回復${Math.round(G.regen * 100)}%兵氣`); if (G.res) parts.push({ fire: '抗火', water: '抗水' }[G.res]); if (G.ward) parts.push({ poison: '防毒', seal: '防封', blind: '防盲', stun: '防定身', sleep: '防昏睡' }[G.ward]); if (G.who) parts.push(`限${G.who.map((w) => MEMBERS[w].name).join('、')}`); return `${SLOT[G.slot]}：${parts.join('　')}`; };
 
 // ---------------------------------------------------------------- the menu on the road
 async function fieldMenu(inTown) {
@@ -229,7 +269,7 @@ async function statusScreen() {
     const u = unit(id), s = stats(u, S.flags), box = el('div', 'win detail'); const f = faceOf(faceFor(id)); if (f) box.appendChild(f);
     box.appendChild(el('div', 'dinfo', `<div class="dname">${esc(nameOf(id))}<small>　第 ${u.lv} 級　經驗 ${u.exp}/${expNeed(u.lv)}</small></div>
       <div class="dstats"><span>兵氣 <b>${u.hp}/${s.hp}</b></span><span>法力 <b>${u.mp}/${s.mp}</b></span><span>攻擊 <b>${s.atk}</b></span><span>防禦 <b>${s.def}</b></span><span>法術 <b>${s.mag}</b></span><span>速度 <b>${s.spd}</b></span></div>
-      <div class="dtac">兵器：${esc(id === '悟空' && !S.flags.金箍棒 ? '樹枝棍' : MEMBERS[id].weapon)}　衣甲：${esc(GEAR[u.eq.body]?.name || '—')}　飾物：${esc(GEAR[u.eq.acc]?.name || '—')}</div>
+      <div class="dtac">兵器：${esc(id === '悟空' && !S.flags.金箍棒 ? '樹枝棍' : MEMBERS[id].weapon)}　衣甲：${esc(GEAR[u.eq.body]?.name || '—')}　頭冠：${esc(GEAR[u.eq.head]?.name || '—')}　鞋履：${esc(GEAR[u.eq.feet]?.name || '—')}　飾物：${esc(GEAR[u.eq.acc]?.name || '—')}</div>
       <div class="dtac">法術：${u.skills.map((k) => esc(SKILLS[k].name)).join('、') || '—'}</div><div class="dhint">（按任意鍵看下一位）</div>`));
     $('ui').appendChild(box); await new Promise((res) => { const off = input.on((a) => { if (['ok', 'cancel', 'menu'].includes(a)) { off(); box.remove(); res(); } }); box.onclick = () => press('ok'); });
   }
@@ -250,9 +290,9 @@ async function fieldItems() {
 }
 async function equipScreen() {
   const id = await pickMember('誰要換裝備？'); if (!id) return; const u = unit(id);
-  for (;;) { const slot = await menu([{ label: `衣甲：${GEAR[u.eq.body]?.name || '—'}`, value: 'body' }, { label: `飾物：${GEAR[u.eq.acc]?.name || '—'}`, value: 'acc' }], { title: nameOf(id), cls: 'order' }); if (!slot) return;
+  for (;;) { const slot = await menu(['body', 'head', 'feet', 'acc'].map((k) => ({ label: `${SLOT[k]}：${GEAR[u.eq[k]]?.name || '—'}`, value: k })), { title: nameOf(id), cls: 'order' }); if (!slot) return;
     const own = [...new Set(S.gear)].filter((k) => GEAR[k].slot === slot && canWear(id, k));
-    const k = await menu([{ label: '（卸下）', value: '-', desc: '' }, ...own.map((k) => ({ label: GEAR[k].name, hint: `×${S.gear.filter((x) => x === k).length}`, value: k, desc: gearDesc(k) }))], { title: slot === 'body' ? '衣甲' : '飾物', cls: 'order wide', foot: '' }); if (!k) continue;
+    const k = await menu([{ label: '（卸下）', value: '-', desc: '' }, ...own.map((k) => ({ label: GEAR[k].name, hint: `×${S.gear.filter((x) => x === k).length}`, value: k, desc: gearDesc(k) }))], { title: SLOT[slot], cls: 'order wide', foot: '' }); if (!k) continue;
     equip(u, slot, k === '-' ? null : k); sfx('ok'); save(); }
 }
 async function nanScreen() { const done = new Set(S.nan); await panel(`<div class="ptitle">八十一難　<small>已歷 ${done.size} 難</small></div><div class="nan">${NAN.map((n, i) => `<span class="${done.has(i + 1) ? 'on' : ''}"><i>${cnum(i + 1)}</i>${done.has(i + 1) ? esc(n) : '？？？'}</span>`).join('')}</div>`, 'nanp'); }

@@ -10,7 +10,7 @@ export const expNeed = (lv) => Math.round(10 + lv * 16 + lv * lv * 4.5 + Math.po
 export const epLv = (i) => Math.min(95, Math.round(2 + i * 1.5 + Math.max(0, i - 30) * 0.25));
 
 export function newUnit(id, lv = 1) {
-  const u = { id, lv: 1, exp: 0, hp: 1, mp: 0, eq: { body: null, acc: null }, skills: [...(MEMBERS[id].start || [])], st: {} };
+  const u = { id, lv: 1, exp: 0, hp: 1, mp: 0, eq: { body: null, acc: null, head: null, feet: null }, skills: [...(MEMBERS[id].start || [])], st: {} };
   setLevel(u, lv); const s = stats(u); u.hp = s.hp; u.mp = s.mp; return u;
 }
 export function setLevel(u, lv) { u.lv = clamp(Math.round(lv), 1, MAXLV); const L = MEMBERS[u.id].learns || {}; for (const [k, sk] of Object.entries(L)) if (u.lv >= +k && !u.skills.includes(sk)) u.skills.push(sk); }
@@ -18,8 +18,8 @@ export function setLevel(u, lv) { u.lv = clamp(Math.round(lv), 1, MAXLV); const 
 function weapon(u, flags = {}) { const lv = u.lv; switch (u.id) { case '悟空': return flags.金箍棒 ? 22 + lv * 1.3 : 4 + lv * 0.6; case '八戒': return 16 + lv * 1.1; case '悟淨': return 15 + lv * 1.0; case '唐僧': return 4 + lv * 0.3; default: return 12 + lv * 1.1; } }
 export function stats(u, flags = {}) {
   const M = MEMBERS[u.id], b = M.base, gr = M.grow, l = u.lv - 1;
-  const s = { hp: b[0] + gr[0] * l, mp: b[1] + gr[1] * l, atk: b[2] + gr[2] * l + weapon(u, flags), def: b[3] + gr[3] * l, mag: b[4] + gr[4] * l, spd: b[5] + gr[5] * l, res: [], ward: [], hit: 0 };
-  for (const slot of ['body', 'acc']) { const G = GEAR[u.eq?.[slot]]; if (!G) continue; for (const k of ['hp', 'mp', 'atk', 'def', 'mag', 'spd', 'hit']) if (G[k]) s[k] += G[k]; if (G.res) s.res.push(G.res); if (G.ward) s.ward.push(G.ward); }
+  const s = { hp: b[0] + gr[0] * l, mp: b[1] + gr[1] * l, atk: b[2] + gr[2] * l + weapon(u, flags), def: b[3] + gr[3] * l, mag: b[4] + gr[4] * l, spd: b[5] + gr[5] * l, res: [], ward: [], hit: 0, crit: 0, regen: 0 };
+  for (const slot of ['body', 'acc', 'head', 'feet']) { const G = GEAR[u.eq?.[slot]]; if (!G) continue; for (const k of ['hp', 'mp', 'atk', 'def', 'mag', 'spd', 'hit', 'crit', 'regen']) if (G[k]) s[k] += G[k]; if (G.res) s.res.push(G.res); if (G.ward) s.ward.push(G.ward); }
   for (const k of ['hp', 'mp', 'atk', 'def', 'mag', 'spd']) s[k] = Math.round(s[k]);
   return s;
 }

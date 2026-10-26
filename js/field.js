@@ -149,6 +149,7 @@ export function makeMap(e) {
   if (P.deco?.length) for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (get(x, y) === FLOOR && R() < 0.1) dc[I(x, y)] = 1 + R.int(0, P.deco.length - 1);
   if (P.layout === 'wild' || P.layout === 'isles') for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if ((x === 0 || y === 0 || x === w - 1 || y === h - 1) && walkable(get(x, y))) put(x, y, P.layout === 'isles' ? WATER : MASS);
   const chests = branches.slice(0, m.chests ?? 3).map(([x, y]) => ({ x, y }));
+  const secretAt = branches.length > chests.length ? { x: branches[chests.length][0], y: branches[chests.length][1] } : chests.length > 1 ? chests.pop() : null; // the end of a side path no chest took
   // places to rest: a spring (a censer in the halls, a golden lotus in heaven) beside the way — half way along, and
   // again a little before the lair; on the long roads one more early on
   const rests = [], restAt = (m.size || 1) >= 3 ? [0.3, 0.6, 0.9] : (m.size || 1) >= 2 ? [0.45, 0.9] : [0.55];
@@ -163,7 +164,7 @@ export function makeMap(e) {
   const midK = (m.size || 1) >= 3 ? 0.45 : (m.size || 1) >= 2 ? 0.36 : 0.42; let midAt = null;
   for (let t = 0; t < 12 && !midAt; t++) { const [x, y] = path[clamp(Math.floor(path.length * midK) + t * (t % 2 ? 1 : -1), 3, path.length - 4)]; if (walkable(get(x, y)) && !npcs.some((n) => n.x === x && n.y === y)) midAt = { x, y }; }
   const at = (x, y) => (walkable(get(x, y)) ? 0 : 1);
-  return { w, h, grid, ob, dc, var4, props, P, start: { x: start[0], y: start[1] }, end: { x: end[0], y: end[1] }, chests, npcs, rests, midAt, mid: null, theme: m.theme, at, get };
+  return { w, h, grid, ob, dc, var4, props, P, start: { x: start[0], y: start[1] }, end: { x: end[0], y: end[1] }, chests, npcs, rests, midAt, mid: null, secretAt, secret: null, theme: m.theme, at, get };
 
   function clear(x, y, to) { if (inb(x, y)) trail[I(x, y)] = 1; const v = get(x, y); if (v === ROAD || v === BRIDGE || v === PROP) return; put(x, y, v === WATER ? BRIDGE : to); }
   function blob(cx, cy, r) { for (let y = cy - r - 1; y <= cy + r + 1; y++) for (let x = cx - r - 2; x <= cx + r + 2; x++) if (x > 0 && y > 0 && x < w - 1 && y < h - 1 && ((x - cx) / (r + 1.5)) ** 2 + ((y - cy) / r) ** 2 <= 1 + (N2(x / 2, y / 2) - 0.5) * 0.6) put(x, y, FLOOR); }
@@ -270,13 +271,19 @@ export function drawMap(g, M, cam0, walkers, t, o = {}) {
   }]);
   const fig = (img, fx, fy) => g.drawImage(img, Math.round(fx * TS + (TS - img.width) / 2 - cam.x), Math.round(fy * TS + TS - img.height + 2 - cam.y));
   for (const n of M.npcs) things.push([n.y, () => fig(walker(n.who, 'down', Math.floor(t / 600) % 2), n.x, n.y)]);
+  if (M.secret && !o.inSecret) { const q = M.secret, me = walkers[0], dist = me ? Math.abs(me.fx - q.x) + Math.abs(me.fy - q.y) : 99; things.push([q.y, () => { // a glimmer that shows itself only to those who come near
+    const sx = q.x * TS + 8 - cam.x, sy = q.y * TS + 8 - cam.y, near = Math.max(0, 1 - dist / 6), tw = (Math.sin(t / 300) + 1) / 2, a = 0.08 + near * (0.5 + tw * 0.4);
+    const gl = g.createRadialGradient(sx, sy, 1, sx, sy, 12); gl.addColorStop(0, `rgba(200,170,255,${a})`); gl.addColorStop(1, 'rgba(160,120,255,0)'); g.fillStyle = gl; g.fillRect(sx - 12, sy - 12, 24, 24);
+    g.fillStyle = `rgba(255,250,255,${a + 0.1})`; for (let i = 0; i < 4; i++) { const ph = (t / 1100 + i / 4) % 1, ang = i * 1.7 + t / 900; g.fillRect(Math.round(sx + Math.cos(ang) * 5), Math.round(sy + 2 - ph * 12), 1, 1); }
+  }]); }
+  if (o.goal === 'lair' && o.inSecret) { const e = M.end; things.push([e.y, () => { const gx = e.x * TS + 8 - cam.x, gy = e.y * TS + 6 - cam.y, k = (Math.sin(t / 260) + 1) / 2, gl = g.createRadialGradient(gx, gy, 1, gx, gy, 16); gl.addColorStop(0, `rgba(170,120,255,${0.35 + k * 0.3})`); gl.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gl; g.fillRect(gx - 16, gy - 16, 32, 32); lairMark(g, gx, gy, t); }]); }
   if (M.mid) { const d = M.mid; things.push([d.y, () => { // the captain of the road: a dark red glow underfoot, a mark of danger over the head
     const sx = d.x * TS + 8 - cam.x, sy = d.y * TS + 12 - cam.y, k = (Math.sin(t / 220) + 1) / 2, gl = g.createRadialGradient(sx, sy, 1, sx, sy, 15);
     gl.addColorStop(0, `rgba(200,30,40,${0.35 + k * 0.3})`); gl.addColorStop(1, 'rgba(120,0,20,0)'); g.fillStyle = gl; g.fillRect(sx - 16, sy - 16, 32, 32);
     const img = walker(d.id, 'left', Math.floor(t / 400) % 2); fig(img, d.x, d.y);
     const my = Math.round(d.y * TS + TS - img.height - 5 - cam.y - k * 2); g.fillStyle = '#2a0a0a'; g.fillRect(sx - 2, my - 1, 4, 7); g.fillStyle = '#ff4a3a'; g.fillRect(sx - 1, my, 2, 3); g.fillRect(sx - 1, my + 4, 2, 1);
   }]); }
-  if (o.goal) { const e = M.end, k = (Math.sin(t / 260) + 1) / 2; things.push([e.y, () => { const gx = e.x * TS + 8 - cam.x, gy = e.y * TS + 6 - cam.y, gl = g.createRadialGradient(gx, gy, 1, gx, gy, 16); gl.addColorStop(0, o.goal === 'lair' ? `rgba(220,40,60,${0.35 + k * 0.3})` : `rgba(255,240,180,${0.4 + k * 0.3})`); gl.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gl; g.fillRect(gx - 16, gy - 16, 32, 32); if (o.goal === 'lair') lairMark(g, gx, gy, t); else fig(walker(o.goal, 'left', 0), e.x, e.y); }]); }
+  if (o.goal && !o.inSecret) { const e = M.end, k = (Math.sin(t / 260) + 1) / 2; things.push([e.y, () => { const gx = e.x * TS + 8 - cam.x, gy = e.y * TS + 6 - cam.y, gl = g.createRadialGradient(gx, gy, 1, gx, gy, 16); gl.addColorStop(0, o.goal === 'lair' ? `rgba(220,40,60,${0.35 + k * 0.3})` : `rgba(255,240,180,${0.4 + k * 0.3})`); gl.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gl; g.fillRect(gx - 16, gy - 16, 32, 32); if (o.goal === 'lair') lairMark(g, gx, gy, t); else fig(walker(o.goal, 'left', 0), e.x, e.y); }]); }
   for (const w of walkers) things.push([w.fy + 0.01, () => fig(walker(w.id, w.dir, w.step), w.fx, w.fy)]);
   things.sort((a, b) => a[0] - b[0]); for (const [, fn] of things) fn();
   weather(g, M, P, walkers[0], cam, t);

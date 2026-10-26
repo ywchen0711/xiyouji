@@ -22,6 +22,7 @@ export class Battle {
     const flags = this.S.flags;
     this.allies = o.party.map((id) => { const u = this.S.units[id] || o.guestUnits[id], s = stats(u, flags), name = this.S.names?.[id] || MEMBERS[id].name; return { side: 'ally', id, u, name, face: o.faceFor ? o.faceFor(id) : id, hp: Math.min(u.hp, s.hp), max: s.hp, mp: Math.min(u.mp, s.mp), mmax: s.mp, atk: s.atk, def: s.def, mag: s.mag, spd: s.spd, lv: u.lv, resList: s.res, ward: s.ward, st: {}, skills: u.skills.filter((k) => SKILLS[k]), guest: !!o.guestUnits[id] }; });
     if (this.S.items.定風丹) for (const a of this.allies) a.ward.push('wind');
+    for (const a of this.allies) { const s = stats(a.u, flags); a.critUp = s.crit || 0; a.regen = s.regen || 0; if (o.sealAll) a.st.seal = 999; }
     this.foes = o.foes.map((id) => foeUnit(id, o.lv + (CAST[id] && o.boss ? 1 : 0)));
     // a great demon met by few pilgrims is not quite so tough (the monkey alone in the first chapters)
     if (o.boss) { const k = Math.min(1.15, 0.5 + 0.17 * this.allies.length); for (const f of this.foes) { f.hp = f.max = Math.round(f.max * (f.boss ? k * (o.hpK || 1) : 0.7)); if (!f.boss) { f.atk = Math.round(f.atk * 0.85); f.mag = Math.round(f.mag * 0.85); } } }
@@ -124,6 +125,7 @@ export class Battle {
     if (this.o.boss) await banner(esc(this.foes.map((f) => f.name).filter((v, i, a) => a.indexOf(v) === i).join('・')), 1300, 'boss');
     else toast(this.foes.length > 1 ? `${this.foes[0].name}等妖怪出現了！` : `${this.foes[0].name}出現了！`, 1500);
     for (this.round = 1; this.round < 200; this.round++) {
+      if (this.o.limit) { if (this.round > this.o.limit) { this.setAuto(false); await banner('時辰已到……', 1200, 'boss'); return this.finish('timeout'); } this.banner(`第 ${this.round} / ${this.o.limit} 回合`); }
       if (this.o.scripted && this.round === this.o.scripted.round) { this.setAuto(false); await wait(300); this.effect('holy', 192, 80, 300, 900); sfx('thunder'); await say([['-', this.o.scripted.text]]); for (const a of this.allies) a.st.capt = 9; this.hud(); await wait(400); return this.finish('story'); }
       const orders = [];
       const able = this.allies.filter((b) => b.hp > 0 && !b.st.capt && !b.st.stun && !b.st.sleep);
@@ -146,6 +148,7 @@ export class Battle {
       // the turn's end: poison and fire hurt, spells wear off, the captured come back
       for (const b of [...this.allies, ...this.foes]) {
         b.guarding = false; if (b.hp <= 0) continue;
+        if (b.regen && !b.st.capt && b.hp < b.max) { const n = Math.min(b.max - b.hp, Math.max(1, Math.round(b.max * b.regen))); b.hp += n; this.pop(b, '+' + n, '#80ff90'); }
         for (const [k, dmgK, col] of [['poison', 0.06, '#7ad040'], ['burn', 0.08, '#ff7a30']]) if (b.st[k] > 0) { const n = Math.max(1, Math.round(b.max * dmgK)); b.hp = Math.max(b.side === 'foe' ? 0 : 1, b.hp - n); this.pop(b, n, col); }
         for (const k of Object.keys(b.st)) if (b.st[k] > 0) { b.st[k]--; if (k === 'capt' && b.st[k] === 0) { this.pop(b, '脫身！', '#fff'); } }
         if (b.side === 'foe' && b.hp <= 0 && !b.dead) { b.dead = 0.01; }
