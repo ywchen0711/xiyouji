@@ -225,7 +225,8 @@ export const blocked = (M, x, y) => M.at(x, y) === 1 || (M.mid && M.mid.x === x 
 export const restKind = (M) => (M.P.layout === 'halls' ? 'censer' : M.P.layout === 'isles' ? 'lotus' : M.P.liquid === 'lava' ? 'censer' : 'spring');
 
 // ---------------------------------------------------------------- drawing
-export function drawMap(g, M, cam, walkers, t, o = {}) {
+export function drawMap(g, M, cam0, walkers, t, o = {}) {
+  const cam = { x: Math.round(cam0.x), y: Math.round(cam0.y) }; // whole pixels, so the ground and the walkers never slip against each other
   const P = M.P, x0 = Math.floor(cam.x / TS) - 1, y0 = Math.floor(cam.y / TS) - 1, x1 = x0 + 26, y1 = y0 + 17, f = Math.floor(t / 450) % 3, lq = P.liquid;
   g.imageSmoothingEnabled = false;
   const isMass = (x, y) => M.get(x, y) === MASS, isWater = (x, y) => M.get(x, y) === WATER || M.get(x, y) === BRIDGE, isRoad = (x, y) => M.get(x, y) === ROAD || M.get(x, y) === BRIDGE;

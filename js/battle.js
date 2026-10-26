@@ -44,22 +44,37 @@ export class Battle {
   render(g, t) {
     const now = performance.now(), dt = (now - this.t0) / 1000;
     g.imageSmoothingEnabled = false; g.drawImage(this.bg, 0, 0, 384, 224);
+    // everything moves by the clock, not by the frame, so it runs the same on any screen; the moves are eased
+    const fdt = Math.min(0.05, (now - (this._last || now)) / 1000); this._last = now;
+    const ease = (k) => 1 - (1 - k) * (1 - k), bump = (k) => Math.sin(Math.PI * Math.min(1, k));
     for (const [i, f] of this.foes.entries()) {
-      if (f.dead > 1.2) continue; const b = f.box; f.alpha = Math.min(1, f.alpha + 0.06);
-      const bob = Math.sin(dt * 1.6 + i) * 1.2, sx = f.shake > 0 ? Math.sin(now / 22) * f.shake : 0; f.shake = Math.max(0, f.shake - 0.4);
+      if (f.dead > 1.2) continue;
+      if (f.lunge) { f.lt0 = now; f.la = f.lunge; f.lunge = 0; } // a lunge is asked for: it starts now
+      if (f.shake) { f.st0 = now; f.sa = f.shake; f.shake = 0; }
+      if (f.flash > 0) { f.ft0 = now; f.fa = f.flash; f.flash = 0; }
+      if (f.dead && !f.dt0) f.dt0 = now;
+      f.alpha = Math.min(1, f.alpha + fdt * 3.5); f.dead = f.dt0 ? 0.01 + (now - f.dt0) / 700 : 0;
+      const b = f.box, lk = f.lt0 ? (now - f.lt0) / 300 : 1, lo = lk < 1 ? bump(lk) * f.la : 0; // forward and back
+      const sk = f.st0 ? (now - f.st0) / 320 : 1, sx = sk < 1 ? Math.sin(sk * 26) * f.sa * (1 - sk) : 0; // a shake that dies away
+      const kb = sk < 1 ? bump(sk * 1.6) * f.sa * 0.5 : 0; // knocked back a little by the blow
+      const fk = f.ft0 ? (now - f.ft0) / 260 : 1, fl = fk < 1 ? (1 - ease(fk)) * f.fa : 0;
+      const bob = f.dead ? 0 : Math.sin(dt * 1.6 + i) * 1.2, sc = 1 + lo * 0.014, dk2 = f.dead ? ease(Math.min(1, f.dead)) : 0;
+      const w = b.w * sc, h = b.h * sc, x = b.x + (b.w - w) / 2 + sx, y = b.y + (b.h - h) + bob + lo * 0.7 - kb + dk2 * 10;
+      f.hpShow = f.hpShow == null ? f.hp : f.hpShow + (f.hp - f.hpShow) * Math.min(1, fdt * 12); // the bar slides down
+      f.hpLag = f.hpLag == null ? f.hp : f.hp > f.hpLag ? f.hp : sk < 1 ? f.hpLag : f.hpLag + (f.hp - f.hpLag) * Math.min(1, fdt * 4); // and what was lost lingers a moment
       g.save(); g.globalAlpha = f.alpha * (f.dead ? Math.max(0, 1 - f.dead) : 1);
       if (f.st.capt) g.globalAlpha *= 0.3;
       // a shadow on the ground, the painted bust in its frame, a glow for the great
-      g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(b.x + b.w / 2 + sx, b.y + b.h + 3, b.w * 0.45, 3.5, 0, 0, 7); g.fill();
-      if (f.boss && this.o.boss) { const gl = g.createRadialGradient(b.x + b.w / 2, b.y + b.h / 2, b.w * 0.3, b.x + b.w / 2, b.y + b.h / 2, b.w * 0.9); gl.addColorStop(0, 'rgba(255,60,40,0.18)'); gl.addColorStop(1, 'rgba(255,60,40,0)'); g.fillStyle = gl; g.fillRect(b.x - b.w * 0.4, b.y - b.h * 0.3, b.w * 1.8, b.h * 1.6); }
-      g.imageSmoothingEnabled = false; g.drawImage(f.art, b.x + sx, b.y + bob - (f.lunge || 0), b.w, b.h);
-      if (f.flash > 0) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = f.flash; g.drawImage(f.art, b.x + sx, b.y + bob, b.w, b.h); g.globalCompositeOperation = 'source-over'; f.flash = Math.max(0, f.flash - 0.08); }
+      g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(b.x + b.w / 2 + sx, b.y + b.h + 3, b.w * (0.45 + lo * 0.006), 3.5, 0, 0, 7); g.fill();
+      if (f.boss && this.o.boss) { const gl = g.createRadialGradient(b.x + b.w / 2, b.y + b.h / 2, b.w * 0.3, b.x + b.w / 2, b.y + b.h / 2, b.w * 0.9); gl.addColorStop(0, `rgba(255,60,40,${0.14 + Math.sin(now / 500) * 0.05})`); gl.addColorStop(1, 'rgba(255,60,40,0)'); g.fillStyle = gl; g.fillRect(b.x - b.w * 0.4, b.y - b.h * 0.3, b.w * 1.8, b.h * 1.6); }
+      if (f.dead) g.filter = `grayscale(${Math.min(1, f.dead * 1.5)}) brightness(${1 - f.dead * 0.3})`;
+      g.imageSmoothingEnabled = false; g.drawImage(f.art, x, y, w, h);
+      if (fl > 0) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = fl; g.drawImage(f.art, x, y, w, h); g.globalCompositeOperation = 'source-over'; }
       g.restore();
-      if (f.lunge) f.lunge = Math.max(0, f.lunge - 0.8);
-      if (f.dead) f.dead += 0.03;
+      b.dx = x - b.x; b.dy = y - b.y;
       // the name, the bar of life (and a cursor when choosing)
-      if (!f.dead && f.hp > 0) {
-        g.fillStyle = 'rgba(0,0,0,0.55)'; g.fillRect(b.x, b.y + b.h + 6, b.w, 3); g.fillStyle = f.hp / f.max > 0.5 ? '#e8c040' : f.hp / f.max > 0.2 ? '#e88030' : '#e83a30'; g.fillRect(b.x, b.y + b.h + 6, b.w * f.hp / f.max, 3);
+      if (!f.dead && (f.hp > 0 || f.hpShow > 0.5)) {
+        const hv = Math.max(0, f.hpShow) / f.max; g.fillStyle = 'rgba(0,0,0,0.55)'; g.fillRect(b.x, b.y + b.h + 6, b.w, 3); g.fillStyle = 'rgba(255,240,220,0.85)'; g.fillRect(b.x, b.y + b.h + 6, b.w * Math.max(0, f.hpLag) / f.max, 3); g.fillStyle = hv > 0.5 ? '#e8c040' : hv > 0.2 ? '#e88030' : '#e83a30'; g.fillRect(b.x, b.y + b.h + 6, b.w * hv, 3);
         g.font = '700 6px "Noto Sans TC", sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(f.name, b.x + b.w / 2 + 0.5, b.y + b.h + 15.5); g.fillStyle = f.boss ? '#ffd870' : '#f0ecd8'; g.fillText(f.name, b.x + b.w / 2, b.y + b.h + 15);
         const sts = Object.keys(f.st).filter((k) => f.st[k] > 0 && ST[k]); if (sts.length) { g.fillStyle = '#e8a0ff'; g.fillText(sts.map((k) => ST[k]).join(''), b.x + b.w / 2, b.y - 2); }
         if (this.cursor === i) { const cx = b.x + b.w / 2, cy = b.y - 6 + Math.sin(now / 120) * 2; g.fillStyle = '#ffe070'; g.beginPath(); g.moveTo(cx - 5, cy - 6); g.lineTo(cx + 5, cy - 6); g.lineTo(cx, cy); g.fill(); g.strokeStyle = 'rgba(255,224,112,0.8)'; g.lineWidth = 1; g.strokeRect(b.x - 1.5, b.y - 1.5, b.w + 3, b.h + 3); }
@@ -85,7 +100,7 @@ export class Battle {
     }
     this.pops = this.pops.filter((p) => now - p.t0 < 900);
     g.font = '900 9px "Noto Sans TC", sans-serif'; g.textAlign = 'center';
-    for (const p of this.pops) { const k = (now - p.t0) / 900, y = p.y - Math.min(1, k * 4) * 10 + Math.max(0, k - 0.25) * 2; g.globalAlpha = 1 - Math.max(0, k - 0.7) / 0.3; g.lineWidth = 2.5; g.strokeStyle = '#000'; g.strokeText(p.text, p.x, y); g.fillStyle = p.col; g.fillText(p.text, p.x, y); g.globalAlpha = 1; }
+    for (const p of this.pops) { const k = (now - p.t0) / 900, r = Math.min(1, k * 4), y = p.y - (1 - (1 - r) * (1 - r)) * 12 - Math.max(0, k - 0.25) * 4, sc = 1 + Math.max(0, 0.35 - k * 1.6); g.save(); g.translate(p.x, y); g.scale(sc, sc); g.globalAlpha = 1 - Math.max(0, k - 0.7) / 0.3; g.lineWidth = 2.5; g.strokeStyle = '#000'; g.strokeText(p.text, 0, 0); g.fillStyle = p.col; g.fillText(p.text, 0, 0); g.restore(); }
   }
   effect(type, x, y, w = 40, dur = 520) { this.fx.push({ type, x, y, w, t0: performance.now(), dur, R: Array.from({ length: 20 }, () => this.R()), rot: this.R() * 6 }); }
   pop(b, text, col) { if (b.side === 'foe') { this.pops.push({ x: b.box.x + b.box.w / 2, y: b.box.y + b.box.h * 0.45, text, col, t0: performance.now() }); return; } const p = this.panelOf(b); if (!p) return; const n = el('div', 'bpop', esc(text)); n.style.color = col; p.appendChild(n); setTimeout(() => n.remove(), 900); }
@@ -94,7 +109,11 @@ export class Battle {
     let h = $('bhud'); if (!h) { h = el('div', ''); h.id = 'bhud'; $('ui').appendChild(h); this.faces = {}; }
     if (h.children.length !== this.allies.length) { h.innerHTML = ''; for (const a of this.allies) { const p = el('div', 'win bpan'); p.dataset.id = a.id; const f = faceOf(a.face); if (f) { f.className = 'bface'; p.appendChild(f); } p.appendChild(el('div', 'binfo')); h.appendChild(p); } }
     for (const a of this.allies) { const p = this.panelOf(a); if (!p) continue; const sts = Object.keys(a.st).filter((k) => a.st[k] > 0 && ST[k]); p.classList.toggle('down', a.hp <= 0); p.classList.toggle('capt', !!a.st.capt); p.classList.toggle('mk', !!a.marked);
-      p.querySelector('.binfo').innerHTML = `<div class="bn"><b>${esc(a.name)}</b><small>Lv${a.lv}</small>${sts.map((k) => `<u class="${BAD.includes(k) || k === 'capt' ? 'bad' : ''}">${ST[k]}</u>`).join('')}</div><div class="bbar hp"><i style="width:${clamp(a.hp / a.max, 0, 1) * 100}%"></i></div><div class="bnum">${a.hp}<small>/${a.max}</small></div><div class="bbar mp"><i style="width:${a.mmax ? clamp(a.mp / a.mmax, 0, 1) * 100 : 0}%"></i></div><div class="bnum mp">${a.mp}<small>/${a.mmax}</small></div>`; }
+      const bi = p.querySelector('.binfo'); if (!bi.firstChild) bi.innerHTML = '<div class="bn"></div><div class="bbar hp"><s></s><i></i></div><div class="bnum"></div><div class="bbar mp"><i></i></div><div class="bnum mp"></div>';
+      const set = (sel, html) => { const n = bi.querySelector(sel); if (n.innerHTML !== html) n.innerHTML = html; }, hpk = clamp(a.hp / a.max, 0, 1) * 100;
+      set('.bn', `<b>${esc(a.name)}</b><small>Lv${a.lv}</small>${sts.map((k) => `<u class="${BAD.includes(k) || k === 'capt' ? 'bad' : ''}">${ST[k]}</u>`).join('')}`);
+      set('.bnum', `${a.hp}<small>/${a.max}</small>`); set('.bnum.mp', `${a.mp}<small>/${a.mmax}</small>`);
+      bi.querySelector('.hp i').style.width = hpk + '%'; bi.querySelector('.hp s').style.width = hpk + '%'; bi.querySelector('.mp i').style.width = (a.mmax ? clamp(a.mp / a.mmax, 0, 1) * 100 : 0) + '%'; }
     const ab = $('bauto'); if (this.auto && !ab) { const b = el('div', 'bautotag', '總攻擊中　按任意鍵停止'); b.id = 'bauto'; $('ui').appendChild(b); } else if (!this.auto && ab) ab.remove();
   }
   panelOf(a) { return document.querySelector(`#bhud .bpan[data-id="${a.id}"]`); }
@@ -208,7 +227,7 @@ export class Battle {
   // a blow: the swing, the hit or the miss, the number
   async strike(a, t0, x, el2, label) {
     const R = this.R; let t = this.coverFor(t0); if (t !== t0) this.pop(t, '護！', '#a8c8ff');
-    if (a.side === 'foe') { a.lunge = 8; sfx('swing'); } else { const p = this.panelOf(a); p?.classList.add('lunge'); setTimeout(() => p?.classList.remove('lunge'), 260); sfx('swing'); }
+    if (a.side === 'foe') { a.lunge = 8; sfx('swing'); } else { const p = this.panelOf(a); if (p) { p.classList.remove('lunge'); void p.offsetWidth; p.classList.add('lunge'); } sfx('swing'); }
     if (label) this.banner(label);
     await wait(170);
     if (R() > hitChance(a, t)) { this.pop(t, '閃避', '#a8c8ff'); sfx('miss'); await wait(260); return 0; }
