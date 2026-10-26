@@ -242,6 +242,18 @@ export function prop(kind, P) {
   });
 }
 
+// a place to rest: a spring in a ring of stones, a bronze censer, a golden lotus (three frames)
+export function rest(kind, f) {
+  return keep('rest' + kind + f, () => {
+    let G;
+    if (kind === 'censer') { G = grid(16, 22); G.ell(8, 20, 6, 1.5, 'rgba(0,0,0,0.3)', { out: false, shade: false }); G.poly([[2, 11], [14, 11], [12, 18], [4, 18]], (x, y) => (x < 6 ? '#d0a050' : '#a8783a')); G.rect(4, 18, 1, 3, '#6a4a2a'); G.rect(11, 18, 1, 3, '#6a4a2a'); G.rect(1, 10, 14, 2, '#c89a4a'); for (let i = 0; i < 3; i++) G.set(6 + i * 2, 13, '#f0d060'); for (let y = 2; y < 10; y++) G.set(8 + Math.round(Math.sin(y / 1.6 + f) * 1.5), y, y % 2 ? '#e0e0e8' : '#c8c8d4'); G.set(7, 9, '#f8a030'); G.set(8, 9, '#ffe070'); return G.canvas(); }
+    if (kind === 'lotus') { G = grid(16, 18); G.ell(8, 15, 7, 2.4, '#e0b040'); for (const [x, y, w] of [[8, 6, 2.2], [4.5, 9, 2], [11.5, 9, 2], [8, 10, 3]]) G.ell(x, y, w, 3.4, (px, py) => (py < y - 1 ? '#fff4f8' : '#f4a8c8')); G.set(8, 3 - (f % 2), '#fff8c0'); return G.canvas(); }
+    G = grid(16, 16); G.ell(8, 9, 7.4, 5.6, (x, y) => ((x + y) % 3 === 0 ? '#7a7a74' : '#9a9890'));
+    G.ell(8, 9, 5, 3.6, (x, y) => ((x + y + f) % 4 === 0 ? '#d8f8ff' : y < 8 ? '#7ad0f0' : '#4aa8e0'), { out: '#3a5a6a', shade: false });
+    G.set(6 + f, 8, '#ffffff'); G.set(10 - f, 10, '#ffffff'); return G.canvas();
+  });
+}
+
 // ---------------------------------------------------------------- chests and the walking figures
 export function chest(open) { return keep('chest' + open, () => { const G = grid(16, 16); G.ell(8, 14, 6, 1.5, 'rgba(0,0,0,0.3)', { out: false, shade: false }); if (open) { G.rect(2, 4, 12, 3, '#4a1a10'); G.rect(3, 5, 10, 2, '#f8e080'); } G.shape((x, y) => x > 2 && x < 14 && y > (open ? 7 : 5) && y < 14, (x, y) => (y < 8 && !open ? '#c8482a' : '#a83a22')); G.rect(2, 8, 12, 1, '#e8c040'); G.rect(7, 7, 2, 3, '#f0d050'); return G.canvas(); }); }
 

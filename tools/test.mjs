@@ -22,7 +22,7 @@ for (const tier of CHEST) for (const k of tier) if (k !== 'gold' && !ITEMS[k]) f
 const nan = STORY.flatMap((e) => e.nan || []); if (nan.length !== 81 || new Set(nan).size !== 81 || NAN.length !== 81) fail(`difficulties: ${nan.length} met, ${new Set(nan).size} distinct, ${NAN.length} named`);
 for (let i = 1; i <= 81; i++) if (!nan.includes(i)) fail(`difficulty ${i} (${NAN[i - 1]}) never met`);
 // every map: the end, each chest and each person on the road can be reached from the start
-const kinds = new Set();
+const kinds = new Set(); let rests = 0;
 for (const e of STORY) {
   if (!e.map) continue; const M = makeMap(e); kinds.add(M.P.layout + ':' + e.map.theme);
   const seen = new Set([M.start.x + ',' + M.start.y]), q = [[M.start.x, M.start.y]];
@@ -31,8 +31,9 @@ for (const e of STORY) {
   if (!seen.has(M.end.x + ',' + M.end.y)) fail(`${e.id}: the end of the map cannot be reached`);
   for (const c of M.chests) if (!near(c)) fail(`${e.id}: a chest at ${c.x},${c.y} cannot be reached`);
   for (const n of M.npcs) if (!near(n)) fail(`${e.id}: ${n.who} at ${n.x},${n.y} cannot be reached`);
+  if (!M.rests.length) fail(`${e.id}: no place to rest`); for (const r of M.rests) if (!near(r)) fail(`${e.id}: a resting place at ${r.x},${r.y} cannot be reached`); rests += M.rests.length;
   if (M.chests.length < Math.min(2, e.map.chests ?? 3)) fail(`${e.id}: only ${M.chests.length} chests`);
 }
-console.log(`maps: ${[...kinds].join(' ')}`);
+console.log(`maps: ${[...kinds].join(' ')}; ${rests} places to rest`);
 console.log(`${STORY.length} episodes, ${lines} lines of story text, ${Object.keys(CAST).length} portraits, ${Object.keys(FOES).length} demons, ${Object.keys(SKILLS).length} arts, ${Object.keys(ITEMS).length + Object.keys(GEAR).length} things`);
 console.log(bad ? `${bad} problem(s)` : 'all ok'); process.exit(bad ? 1 : 0);

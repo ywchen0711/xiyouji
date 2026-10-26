@@ -6,7 +6,7 @@ import { STORY, MEMBERS, SKILLS, ITEMS, GEAR, SHOP, CHEST, NAN, ORDER } from './
 import { CAST } from './data/cast.js';
 import { newUnit, setLevel, stats, epLv, expNeed, canWear } from './rules.js';
 import { Battle } from './battle.js';
-import { makeMap, drawMap, blocked, TS } from './field.js';
+import { makeMap, drawMap, blocked, restKind, TS } from './field.js';
 import { backdrop, THEMES } from './art.js';
 import { say, lines, menu, confirm, toast, panel, banner, input, press, $, el, faceOf } from './ui.js';
 import { sfx, music, setSound, soundOn } from './sound.js';
@@ -118,6 +118,12 @@ async function interact() {
   const d = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[P.dir], x = P.x + d[0], y = P.y + d[1], E = exploring, id = E.e.id;
   if (x === M.end.x && y === M.end.y && E.goal) return reachEnd();
   const n = M.npcs.find((q) => q.x === x && q.y === y); if (n) return say([[n.who, n.text]], sayOpt());
+  const r = M.rests.find((q) => q.x === x && q.y === y);
+  if (r) { // rest: everyone (and the guests) whole again, every ill gone, the game saved
+    for (const u of Object.values(S.units)) { heal(u); if (u.st) u.st = {}; }
+    sfx('heal'); const k = restKind(M);
+    await banner(k === 'censer' ? '焚一爐清香，靜坐片刻，眾人氣血調和。<br><small>兵氣、法力全滿，已記錄進度。</small>' : k === 'lotus' ? '金蓮放光，照得眾人神清氣爽。<br><small>兵氣、法力全滿，已記錄進度。</small>' : '一汪靈泉，清冽甘甜，眾人掬水而飲，精神百倍。<br><small>兵氣、法力全滿，已記錄進度。</small>', 1700);
+    save(); return; }
   const c = M.chests.find((q) => q.x === x && q.y === y), key = x + ',' + y;
   if (c && !(S.opened[id] || []).includes(key)) { (S.opened[id] = S.opened[id] || []).push(key); sfx('chest'); const R = rng(hash(id + key)), tier = Math.min(3, Math.floor(S.ep / 14)); let got;
     if (R() < 0.22) { const pool = (SHOP[Math.min(SHOP.length - 1, Math.floor(S.ep / 5) + 2)] || []).filter((k) => GEAR[k]); got = pool.length ? give(R.pick(pool)) : null; }
