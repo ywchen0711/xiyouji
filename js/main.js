@@ -15,7 +15,7 @@ import { rng, hash, clamp, esc, wait } from './util.js';
 const KEY = 'xiyouji.v1', GAME = 'xiyouji', LW = 384, LH = 224, K = 3;
 const cv = $('cv'), g = cv.getContext('2d'); cv.width = LW * K; cv.height = LH * K;
 let S = null, scene = 'title', busy = false, cloud = null, battle = null, M = null, stageBg = 'heaven', exploring = null;
-const P = { x: 0, y: 0, fx: 0, fy: 0, dir: 'right', step: 0, trail: [], since: 0, moving: false };
+const P = { x: 0, y: 0, fx: 0, fy: 0, dir: 'right', step: 0, trail: [], from: [], fdir: [], k: 1, endT: 0, since: 0, moving: false };
 const RETRY = Symbol('retry');
 
 // ---------------------------------------------------------------- the journey's state
@@ -45,7 +45,9 @@ function draw(t) {
   if (scene === 'title') { const k = t / 4000; g.fillStyle = 'rgba(255,240,200,0.1)'; for (let i = 0; i < 6; i++) { g.beginPath(); g.ellipse(((i * 80 + k * 30) % 460) - 40, 150 + Math.sin(i) * 20, 60, 10, 0, 0, 7); g.fill(); } }
   if (scene === 'story') { g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(0, 0, LW, LH); }
 }
-function walkers() { const ids = party().concat(S.guests.filter((x) => x === '伯欽')), out = []; ids.forEach((id, i) => { const p = i === 0 ? { x: P.fx, y: P.fy, dir: P.dir } : P.trail[i * 1 - 1] || { x: P.fx, y: P.fy, dir: P.dir }; out.push({ id: ['悟空', '唐僧', '八戒', '悟淨'].includes(id) ? id : 'npc', fx: p.x, fy: p.y, dir: p.dir, step: P.moving ? Math.floor(performance.now() / 160) % 2 : 0 }); }); return out; }
+function walkers() { const now = performance.now(), walking = P.moving || now - (P.endT || 0) < 90, ids = party().concat(S.guests.filter((x) => x === '伯欽')), out = []; ids.forEach((id, i) => { const p = i === 0 ? { x: P.fx, y: P.fy, dir: P.dir } : follower(i - 1); out.push({ id: ['悟空', '唐僧', '八戒', '悟淨'].includes(id) ? id : 'npc', fx: p.x, fy: p.y, dir: p.dir, step: walking ? Math.floor(now / 170) % 2 : 0 }); }); return out; }
+// those behind glide from the square they stood on to the one the one ahead of them left, facing the way they go
+function follower(j) { const a = P.from[j] || P.trail[j] || P, b = P.trail[j] || a, k = P.k, dx = b.x - a.x, dy = b.y - a.y; if (dx || dy) P.fdir[j] = dx > 0 ? 'right' : dx < 0 ? 'left' : dy > 0 ? 'down' : 'up'; return { x: a.x + dx * k, y: a.y + dy * k, dir: P.fdir[j] || P.dir }; }
 
 // ---------------------------------------------------------------- the story, episode by episode
 async function runStory() {
@@ -92,7 +94,7 @@ async function chapterCard(e) { sfx('gong'); await banner(`<div class="hui">${es
 // ---------------------------------------------------------------- walking a road
 function explore(e) {
   M = makeMap(e); const md = MIDS[e.id]; if (md && M.midAt && !(S.mids || {})[e.id]) M.mid = { ...M.midAt, id: md.foes[0] }; scene = 'map'; music(THEMES[e.map.theme]?.music || 'road');
-  const p = S.pos || M.start; P.x = P.fx = p.x; P.y = P.fy = p.y; P.dir = p.dir || 'right'; P.trail = []; P.since = 0;
+  const p = S.pos || M.start; P.x = P.fx = p.x; P.y = P.fy = p.y; P.dir = p.dir || 'right'; P.trail = [0, 1, 2, 3].map(() => ({ x: p.x, y: p.y })); P.from = []; P.fdir = []; P.k = 1; P.since = 0;
   const goal = e.boss ? 'lair' : e.map.goal || null;
   return new Promise((res) => { exploring = { e, goal, res }; busy = false; if (!S.pos) banner(esc(e.map.name), 1200); });
 }
@@ -102,10 +104,11 @@ async function tryMove(dx, dy) {
   if (x === M.end.x && y === M.end.y && E.goal) { await reachEnd(); return; }
   if (M.mid && x === M.mid.x && y === M.mid.y) { await midFight(E.e); return; }
   if (blocked(M, x, y)) return;
-  P.moving = true; P.trail.unshift({ x: P.x, y: P.y, dir: P.dir }); P.trail.length = 4;
-  const fx0 = P.x, fy0 = P.y, tr0 = P.trail.map((q) => ({ ...q })), t0 = performance.now(); P.x = x; P.y = y;
-  await new Promise((res) => { const f = (now) => { const k = Math.min(1, (now - t0) / 170); P.fx = fx0 + dx * k; P.fy = fy0 + dy * k; if (k < 1) requestAnimationFrame(f); else res(); }; requestAnimationFrame(f); });
-  P.moving = false; S.steps++; P.since++;
+  P.from = P.trail.map((q) => ({ ...q })); P.moving = true; P.trail.unshift({ x: P.x, y: P.y }); P.trail.length = 4; P.k = 0;
+  // one step runs on from the last without a pause between, so a held key walks smoothly
+  const fx0 = P.x, fy0 = P.y, now0 = performance.now(), t0 = now0 - (P.endT || 0) < 120 ? P.endT : now0; P.x = x; P.y = y;
+  await new Promise((res) => { const f = (now) => { const k = Math.max(0, Math.min(1, (now - t0) / 170)); P.k = k; P.fx = fx0 + dx * k; P.fy = fy0 + dy * k; if (k < 1) requestAnimationFrame(f); else res(); }; f(performance.now()); });
+  P.endT = t0 + 170; P.k = 1; P.moving = false; S.steps++; P.since++;
   if (S.steps % 12 === 0) save();
   const foes = E.e.map.foes || [];
   if (M.mid && Math.abs(M.mid.x - P.x) + Math.abs(M.mid.y - P.y) <= 2) { P.since = 0; await midFight(E.e); return; } // the captain sees them coming
@@ -300,5 +303,5 @@ for (const b of document.querySelectorAll('[data-k]')) { const k = b.dataset.k; 
 function fit() { const r = Math.min(innerWidth / LW, innerHeight / LH); cv.style.width = Math.floor(LW * r) + 'px'; cv.style.height = Math.floor(LH * r) + 'px'; document.documentElement.style.setProperty('--s', r.toFixed(3)); }
 addEventListener('resize', fit); fit();
 requestAnimationFrame(loop);
-window.XY = { get S() { return S; }, get battle() { return battle; }, get scene() { return scene; }, get busy() { return busy; }, P, STORY, fight, give, join, save, get M() { return M; }, get exploring() { return exploring; }, reachEnd };
+window.XY = { get S() { return S; }, walkers, get battle() { return battle; }, get scene() { return scene; }, get busy() { return busy; }, P, STORY, fight, give, join, save, get M() { return M; }, get exploring() { return exploring; }, reachEnd };
 (async () => { try { cloud = await import('/save.js'); await cloud.pull(GAME, KEY); } catch (e) { cloud = null; } title(); })();
