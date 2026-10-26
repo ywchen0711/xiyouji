@@ -131,6 +131,7 @@ async function reachEnd() {
       const st = e.boss[s]; save();
       if (st.pre) await say(lines(st.pre), sayOpt());
       for (const it of st.give || []) toast(`得到了「${give(it)}」`);
+      if (st.party) for (const id of st.party) if (S.units[id]) heal(S.units[id]); // a fight apart from the others comes after a break in the tale
       const r = await fight({ foes: st.foes, lv: epLv(S.ep), theme: e.map.theme, boss: true, scripted: st.scripted, party: st.party, guest: st.guest, hpK: st.hpK });
       if (r.end === 'lose' && !st.lose) { await gameOver(); return; }
       if (r.end === 'story' || r.end === 'lose') for (const id of Object.keys(S.units)) { const u = S.units[id], s2 = stats(u, S.flags); u.hp = Math.max(u.hp, Math.round(s2.hp * 0.5)); u.mp = Math.max(u.mp, Math.round(s2.mp * 0.5)); }
@@ -277,5 +278,5 @@ for (const b of document.querySelectorAll('[data-k]')) { const k = b.dataset.k; 
 function fit() { const r = Math.min(innerWidth / LW, innerHeight / LH); cv.style.width = Math.floor(LW * r) + 'px'; cv.style.height = Math.floor(LH * r) + 'px'; document.documentElement.style.setProperty('--s', r.toFixed(3)); }
 addEventListener('resize', fit); fit();
 requestAnimationFrame(loop);
-window.XY = { get S() { return S; }, get scene() { return scene; }, get busy() { return busy; }, P, STORY, fight, give, join, save, get M() { return M; }, get exploring() { return exploring; }, reachEnd };
+window.XY = { get S() { return S; }, get battle() { return battle; }, get scene() { return scene; }, get busy() { return busy; }, P, STORY, fight, give, join, save, get M() { return M; }, get exploring() { return exploring; }, reachEnd };
 (async () => { try { cloud = await import('/save.js'); await cloud.pull(GAME, KEY); } catch (e) { cloud = null; } title(); })();

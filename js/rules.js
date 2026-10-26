@@ -27,10 +27,10 @@ export function gainExp(u, n) { u.exp += n; let up = 0; while (u.lv < MAXLV && u
 export const canWear = (id, g) => !GEAR[g].who || GEAR[g].who.includes(id);
 
 // ---------------------------------------------------------------- demons
-const NORM = (lv) => ({ hp: 22 + lv * 9 + lv * lv * 0.17, atk: 11 + lv * 4.3, def: 5 + lv * 2.0, mag: 8 + lv * 3.3, spd: 7 + lv * 2.0 });
+const NORM = (lv) => ({ hp: 22 + lv * 9 + lv * lv * 0.13, atk: 11 + lv * 4.3, def: 5 + lv * 2.0, mag: 8 + lv * 3.3, spd: 7 + lv * 2.0 });
 export function foeUnit(id, lv) {
   const F = FOES[id], C = CAST[id], n = NORM(lv), m = F.m, boss = !!F.boss;
-  const hp = Math.round(n.hp * m[0] * (boss ? 1.35 : 1));
+  const hp = Math.round(n.hp * m[0] * (boss ? 1.15 : 1));
   return { id, name: C?.name || id, lv, boss, hp, max: hp, atk: Math.round(n.atk * m[1] * (boss ? 1.08 : 1)), def: Math.round(n.def * m[2]), mag: Math.round(n.mag * m[3]), spd: Math.round(n.spd * m[4]), arts: F.arts, weak: F.weak, res: F.res, st: {}, side: 'foe' };
 }
 // what a demon gives: a share of the level's need, less when the pilgrims are far above it
@@ -49,8 +49,9 @@ export function physical(a, t, x, R, o = {}) {
   return { n: Math.max(1, Math.round(d)), crit };
 }
 export function magical(a, t, pw, R, o = {}) {
-  const mdef = t.def * 0.22 + t.mag * 0.3;
-  let d = (pw * (1 + a.lv * 0.05) + a.mag * 2.2) * (0.9 + R() * 0.2) - mdef; d = Math.max(d, pw * 0.3 + 1);
+  // a pilgrim's spell leans on their magic; a demon's on its art, and the pilgrims' spirit resists it
+  const foe = a.side === 'foe', mdef = foe ? t.def * 0.4 + t.mag * 0.4 : t.def * 0.22 + t.mag * 0.3;
+  let d = (pw * (1 + a.lv * (foe ? 0.03 : 0.05)) + a.mag * (foe ? 0.7 : 2.2)) * (0.9 + R() * 0.2) - mdef; d = Math.max(d, pw * 0.3 + 1);
   d *= elemK(o.el, t); if (t.guarding) d *= 0.6; if (t.st.barrier) d *= 0.6;
   return { n: Math.max(1, Math.round(d)), crit: false };
 }

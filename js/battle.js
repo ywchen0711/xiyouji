@@ -170,13 +170,16 @@ export class Battle {
   // the pilgrims fighting on their own: the master heals, the rest strike the weakest (or all, when there are many)
   autoOrder(b) {
     const foes = this.alive('foe'), weakest = foes.sort((x, y) => x.hp - y.hp)[0], has = (k) => b.skills.includes(k) && (SKILLS[k].mp || 0) <= b.mp && !b.st.seal;
-    const hurt = this.alive('ally').filter((a) => a.hp / a.max < 0.45).sort((x, y) => x.hp / x.max - y.hp / y.max), down = this.allies.filter((a) => a.hp <= 0);
+    const hurt = this.alive('ally').filter((a) => a.hp / a.max < 0.55).sort((x, y) => x.hp / x.max - y.hp / y.max), down = this.allies.filter((a) => a.hp <= 0);
     if (down.length && has('t往生')) return { b, kind: 'skill', sk: 't往生', target: down[0] };
+    if (down.length && !this.allies.some((x) => x.hp > 0 && x.skills.includes('t往生') && x.mp >= 16) && !this._revived) { const it = ['九轉丹', '還魂丹'].find((k) => this.S.items[k] > 0); if (it) { this._revived = true; setTimeout(() => { this._revived = false; }, 0); return { b, kind: 'item', item: it, target: down[0] }; } }
     if (hurt.length >= 2 && has('t大悲')) return { b, kind: 'skill', sk: 't大悲' };
     if (hurt.length >= 2 && has('t心經')) return { b, kind: 'skill', sk: 't心經' };
     if (hurt.length && has('t念佛')) return { b, kind: 'skill', sk: 't念佛', target: hurt[0] };
     if (b.id === '唐僧') { if (foes.length >= 2 && has('t真言')) return { b, kind: 'skill', sk: 't真言' }; if (foes.length >= 2 && has('t白龍')) return { b, kind: 'skill', sk: 't白龍' }; }
     if (foes.length >= 3) for (const k of ['m擎天', 'm分身', 'b水軍', 'b亂築', 's骷髏', 's流沙', 'g火輪']) if (has(k)) return { b, kind: 'skill', sk: k };
+    // against one great demon (or the last foe standing), the strongest single blow they can afford
+    if (foes.length <= 2 && (this.o.boss || weakest.hp > b.atk * 2)) for (const k of ['m齊天', 'b天蓬', 's降妖', 'm千鈞', 'g三尖', 's寶杖']) if (has(k) && b.mp >= (SKILLS[k].mp || 0) * 2) return { b, kind: 'skill', sk: k, target: weakest };
     return { b, kind: 'attack', target: weakest };
   }
   foeOrder(f) {

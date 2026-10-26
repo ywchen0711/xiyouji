@@ -22,8 +22,15 @@ for (const [i, e] of STORY.entries()) {
     const rounds = fHP / Math.max(1, dpr * outK);
     // the demons' damage a round on an average pilgrim
     const avg = us.reduce((s, u) => s + u.def, 0) / us.length, tgt = { def: avg, mag: 20, st: {}, side: 'ally' };
-    let fdr = 0; for (const f of foes) fdr += physical(f, tgt, 1.1, R).n * 0.95;
-    const taken = fdr * inK * rounds / pHP;
+    // each demon: plain blows part of the time, its arts the rest (a party-wide art hits everyone)
+    const tg2 = { def: avg, mag: us.reduce((s, u) => s + u.mag, 0) / us.length, st: {}, side: 'ally' };
+    let fdr = 0; for (const f of foes) { const arts = (f.arts || []).map((k) => SKILLS[k]), pArt = arts.length ? (f.boss ? 0.55 : 0.3) : 0;
+      const plain = physical(f, tgt, 1, R).n * 0.95;
+      const art = arts.length ? arts.reduce((sum, T) => { const n = T.to === 'all' ? us.length : /^rand(\d)$/.test(T.to) ? +T.to.slice(4) : 1; if (T.kind === 'atk') return sum + physical(f, tgt, T.x, R).n * n; if (T.kind === 'mag') return sum + magical(f, tg2, T.pw, R).n * n; if (T.kind === 'heal' || T.kind === 'buff') return sum; return sum + plain * 0.5; }, 0) / arts.length : 0;
+      fdr += plain * (1 - pArt) + art * pArt; }
+    // the master's prayers: half his turns go to healing the whole party
+    const tang = us.find((u) => u.id === '唐僧'), heal = tang ? (tang.skills.includes('t心經') ? (26 * (1 + lv * 0.06) + tang.mag * 2.4) * us.length : 22 * (1 + lv * 0.06) + tang.mag * 2.4) * 0.5 : 0;
+    const taken = Math.max(0, fdr * inK - heal) * rounds / pHP;
     const flag = st.lose ? 'story' : taken > 1.6 ? 'HARD' : taken < 0.15 ? 'easy' : '';
     if (flag === 'HARD') hard++;
     console.log(`${e.id} ${e.title.padEnd(10, '　')} lv${String(lv).padStart(2)} ${st.foes.join('+').padEnd(16, '　')} party ${ids.length}  rounds ${rounds.toFixed(1).padStart(5)}  life lost ${(taken * 100).toFixed(0).padStart(4)}%  ${flag}`);
