@@ -1,0 +1,7 @@
+<!doctype html><meta charset="utf-8"><body style="margin:0;background:#111;color:#ddd;font:12px sans-serif;display:flex;flex-wrap:wrap;gap:6px;padding:6px">
+<script type="module">
+import { CAST } from './js/data/cast.js'; import { portrait } from './js/portrait.js';
+const q = new URLSearchParams(location.search), ids = (q.get('ids') || Object.keys(CAST).join(',')).split(','), s = +(q.get('s') || 160);
+for (const id of ids) { const d = document.createElement('div'); let c; try { c = portrait(id); } catch (e) { c = document.createElement('div'); c.textContent = 'ERR ' + e.message; console.error(id, e.stack); } if (c.style) c.style.width = s + 'px'; d.append(c, document.createElement('br'), id); document.body.appendChild(d); }
+window.done = 1;
+</script>

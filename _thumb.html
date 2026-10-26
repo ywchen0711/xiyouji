@@ -1,0 +1,14 @@
+<!doctype html><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@900&display=swap" rel="stylesheet">
+<body style="margin:0;width:960px;height:540px;overflow:hidden;background:#000">
+<canvas id="c" width="960" height="540"></canvas>
+<script type="module">
+import { backdrop } from './js/art.js'; import { portrait } from './js/portrait.js';
+const c = document.getElementById('c'), g = c.getContext('2d');
+g.drawImage(backdrop('heaven'), 0, 0, 960, 560);
+const ids = ['八戒', '悟空', '唐僧', '悟淨'], xs = [70, 280, 490, 700];
+ids.forEach((id, i) => { const p = portrait(id); const w = 190, h = 238, y = 250 - (i === 1 || i === 2 ? 26 : 0); g.save(); g.shadowColor = 'rgba(0,0,0,0.6)'; g.shadowBlur = 20; g.drawImage(p, xs[i], y, w, h); g.restore(); g.strokeStyle = '#e8d09a'; g.lineWidth = 3; g.strokeRect(xs[i], y, w, h); });
+await document.fonts.load('900 120px "Noto Serif TC"');
+g.textAlign = 'center'; g.font = '900 128px "Noto Serif TC"'; g.lineWidth = 10; g.strokeStyle = '#5a1a08'; g.strokeText('西遊記', 480, 160); g.fillStyle = '#ffd870'; g.fillText('西遊記', 480, 160);
+g.font = '900 40px "Noto Serif TC"'; g.fillStyle = '#8a2a1a'; g.fillText('八 十 一 難', 480, 220);
+window.done = 1;
+</script>

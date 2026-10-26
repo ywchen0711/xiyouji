@@ -1,0 +1,260 @@
+// The rules' data: the pilgrims and their guests, every spell and demon art, the demons themselves, things to use and
+// to wear, the shops, and the eighty-one difficulties.
+import { PART1 } from './story1.js';
+import { PART2 } from './story2.js';
+import { PART3 } from './story3.js';
+export const STORY = [...PART1, ...PART2, ...PART3];
+
+// ---------------------------------------------------------------- the pilgrims (stats at level 1, gain per level)
+// hp mp atk def mag spd; the weapon each carries grows with them
+export const MEMBERS = {
+  悟空: { name: '孫悟空', base: [84, 14, 14, 9, 7, 15], grow: [15, 2.4, 3.4, 1.9, 1.5, 2.1], weapon: '如意金箍棒', learns: { 14: 'm千鈞', 26: 'm猴毛', 44: 'm擎天', 62: 'm齊天' }, start: ['m棒'] },
+  八戒: { name: '豬八戒', base: [84, 10, 13, 11, 5, 8], grow: [19, 1.8, 3.0, 2.3, 1.2, 1.3], weapon: '九齒釘鈀', learns: { 20: 'b變', 26: 'b水軍', 34: 'b鼾', 48: 'b天蓬', 62: 'b九齒' }, start: ['b亂築', 'b大胃'] },
+  悟淨: { name: '沙悟淨', base: [76, 12, 12, 13, 8, 9], grow: [17, 2.0, 2.7, 2.6, 1.6, 1.4], weapon: '降妖寶杖', learns: { 26: 's流沙', 32: 's捲簾', 46: 's骷髏', 60: 's降妖' }, start: ['s寶杖', 's護'] },
+  唐僧: { name: '唐三藏', base: [46, 22, 5, 7, 15, 7], grow: [10, 3.8, 1.0, 1.4, 3.2, 1.1], weapon: '九環錫杖', learns: { 12: 't慈悲', 20: 't往生', 38: 't金蟬', 54: 't大悲', 68: 't真言' }, start: ['t念佛'] },
+  // guests who fight beside them for a while
+  伯欽: { name: '劉伯欽', base: [90, 6, 22, 12, 4, 12], grow: [12, 0.5, 2.2, 1.4, 0.4, 1.0], weapon: '鋼叉', guest: true, start: ['g鋼叉', 'g射'] },
+  木叉: { name: '惠岸行者', base: [120, 30, 30, 20, 20, 16], grow: [14, 2, 3, 2, 2, 1.6], weapon: '渾鐵棍', guest: true, start: ['g鐵棍', 'g甘露'] },
+  昴日: { name: '昴日星官', base: [120, 30, 30, 20, 30, 20], grow: [14, 2, 3, 2, 2.5, 1.8], weapon: '金冠', guest: true, start: ['g雞鳴', 'g啄'] },
+  哪吒: { name: '哪吒三太子', base: [140, 40, 36, 22, 26, 22], grow: [15, 2, 3.4, 2, 2.4, 2], weapon: '火尖鎗', guest: true, start: ['g三頭', 'g火輪'] },
+  二郎: { name: '二郎真君', base: [160, 40, 40, 26, 26, 22], grow: [16, 2, 3.6, 2.2, 2.4, 2], weapon: '三尖兩刃刀', guest: true, start: ['g三尖', 'g哮天'] },
+};
+export const ORDER = ['悟空', '唐僧', '八戒', '悟淨'];
+
+// ---------------------------------------------------------------- arts
+// kind: atk (×atk), mag (power + mag), heal, revive, buff, debuff, cure, escape, capture, seal …
+// to: one / all / self / ally / allies / rand(n) ; el: fire water wind thunder earth holy dark poison
+export const SKILLS = {
+  // the monkey
+  m棒: { name: '如意棒法', mp: 0, kind: 'atk', to: 'one', x: 1.35, desc: '把金箍棒舞將起來，打一個敵人' },
+  m分身: { name: '身外身法', mp: 6, kind: 'atk', to: 'all', x: 0.8, desc: '拔一把毫毛變作小猴，打全體敵人' },
+  m變化: { name: '七十二變', mp: 5, kind: 'buff', to: 'self', st: 'evade', n: 3, desc: '變化身形，三回合內容易閃避' },
+  m筋斗: { name: '觔斗雲', mp: 2, kind: 'escape', to: 'self', desc: '一個筋斗十萬八千里：必定逃脫（頭目戰除外）' },
+  m定身: { name: '定身法', mp: 8, kind: 'debuff', to: 'one', st: 'stun', n: 2, p: 0.85, desc: '定住一個敵人兩回合' },
+  m火眼: { name: '火眼金睛', mp: 6, kind: 'buff', to: 'self', st: 'focus', n: 3, desc: '識破妖邪：三回合內必中，會心大增' },
+  m千鈞: { name: '千鈞棒', mp: 10, kind: 'atk', to: 'one', x: 2.3, desc: '萬三千五百斤的棒，當頭一擊' },
+  m猴毛: { name: '毫毛萬猴', mp: 16, kind: 'atk', to: 'rand5', x: 0.85, desc: '萬千小猴一擁而上，隨機打五下' },
+  m擎天: { name: '擎天一柱', mp: 28, kind: 'atk', to: 'all', x: 1.75, desc: '棒長萬丈，橫掃全體敵人' },
+  m齊天: { name: '齊天神威', mp: 36, kind: 'atk', to: 'one', x: 3.6, desc: '齊天大聖的全力一擊' },
+  // the pig
+  b亂築: { name: '釘鈀亂築', mp: 5, kind: 'atk', to: 'all', x: 0.85, desc: '九齒釘鈀亂築一氣，打全體敵人' },
+  b大胃: { name: '狼吞虎嚥', mp: 4, kind: 'heal', to: 'self', pct: 0.4, desc: '吃一頓，回復自己四成兵氣' },
+  b變: { name: '三十六變', mp: 6, kind: 'buff', to: 'self', st: 'taunt', n: 3, desc: '變作大個子，三回合內引敵攻擊自己，防禦加倍' },
+  b水軍: { name: '天蓬水軍', mp: 14, kind: 'atk', to: 'all', x: 1.25, el: 'water', desc: '喚來天河八萬水兵，水屬性全體攻擊' },
+  b鼾: { name: '震天鼾', mp: 10, kind: 'debuff', to: 'all', st: 'sleep', n: 3, p: 0.5, desc: '鼾聲如雷，使敵人昏昏欲睡' },
+  b天蓬: { name: '天蓬元帥', mp: 24, kind: 'atk', to: 'one', x: 3.0, desc: '天河元帥的舊本事，重重一鈀' },
+  b九齒: { name: '九齒連環', mp: 30, kind: 'atk', to: 'rand4', x: 1.2, desc: '連環四鈀，隨機打四下' },
+  // the sand monk
+  s寶杖: { name: '降妖杖', mp: 4, kind: 'atk', to: 'one', x: 1.6, desc: '月裡梭羅仙木的寶杖，打一個敵人' },
+  s護: { name: '護師', mp: 3, kind: 'buff', to: 'self', st: 'cover', n: 3, desc: '三回合內，替兵氣最少的同伴擋下攻擊' },
+  s流沙: { name: '八百流沙', mp: 10, kind: 'mag', to: 'all', pw: 40, el: 'water', st: 'blind', p: 0.3, desc: '流沙河水捲來，全體攻擊，可能使敵人目盲' },
+  s捲簾: { name: '捲簾大將', mp: 12, kind: 'buff', to: 'allies', st: 'guardup', n: 3, desc: '全體同伴三回合內防禦提升' },
+  s骷髏: { name: '九骷髏陣', mp: 22, kind: 'atk', to: 'all', x: 1.45, el: 'dark', desc: '項下九個骷髏化作陰風，全體攻擊' },
+  s降妖: { name: '降妖伏魔', mp: 26, kind: 'atk', to: 'one', x: 3.0, el: 'holy', desc: '寶杖放光，重擊一個妖魔' },
+  // the master
+  t念佛: { name: '念佛', mp: 4, kind: 'heal', to: 'ally', pw: 22, desc: '口念佛號，回復一位同伴' },
+  t緊箍: { name: '緊箍咒', mp: 3, kind: 'buff', to: 'monkey', st: 'rage', n: 3, desc: '念那話兒：悟空頭疼欲裂，三回合內攻擊大增' },
+  t白龍: { name: '白龍馬', mp: 8, kind: 'mag', to: 'all', pw: 46, el: 'water', desc: '白龍馬現出龍身，水屬性全體攻擊' },
+  t心經: { name: '心經', mp: 10, kind: 'heal', to: 'allies', pw: 26, desc: '誦《多心經》，回復全體同伴' },
+  t慈悲: { name: '慈悲咒', mp: 6, kind: 'cure', to: 'allies', pw: 10, desc: '解除全體同伴的異常狀態' },
+  t往生: { name: '往生咒', mp: 16, kind: 'revive', to: 'dead', pct: 0.5, desc: '救活一位倒下的同伴，回復一半兵氣' },
+  t金蟬: { name: '金蟬法身', mp: 18, kind: 'buff', to: 'allies', st: 'barrier', n: 3, desc: '金蟬子的法身護持：三回合內所受傷害減少' },
+  t大悲: { name: '大悲咒', mp: 30, kind: 'heal', to: 'allies', pw: 130, cure: true, desc: '大回復全體同伴並解除異常' },
+  t真言: { name: '六字真言', mp: 30, kind: 'mag', to: 'all', pw: 170, el: 'holy', desc: '唵嘛呢叭咪吽，聖光全體攻擊' },
+  // guests
+  g鋼叉: { name: '鋼叉', mp: 0, kind: 'atk', to: 'one', x: 1.5, desc: '獵戶的鋼叉' },
+  g射: { name: '連珠箭', mp: 3, kind: 'atk', to: 'rand3', x: 0.8, desc: '連射三箭' },
+  g鐵棍: { name: '渾鐵棍', mp: 0, kind: 'atk', to: 'one', x: 1.6, desc: '惠岸的渾鐵棍' },
+  g甘露: { name: '楊柳甘露', mp: 8, kind: 'heal', to: 'allies', pw: 60, cure: true, desc: '菩薩的甘露，回復全體並抵禦烈火' },
+  g雞鳴: { name: '雞鳴', mp: 10, kind: 'atk', to: 'all', x: 1.4, el: 'holy', desc: '一聲雞鳴，專剋毒物' },
+  g啄: { name: '金喙', mp: 0, kind: 'atk', to: 'one', x: 1.6, desc: '雙冠公雞的一啄' },
+  g三頭: { name: '三頭六臂', mp: 12, kind: 'atk', to: 'rand6', x: 0.75, desc: '六般兵器齊下' },
+  g火輪: { name: '風火輪', mp: 10, kind: 'mag', to: 'all', pw: 90, el: 'fire', desc: '火輪真火，燒全體敵人' },
+  g三尖: { name: '三尖兩刃刀', mp: 0, kind: 'atk', to: 'one', x: 1.8, desc: '真君的神兵' },
+  g哮天: { name: '哮天犬', mp: 10, kind: 'atk', to: 'rand3', x: 1.0, desc: '細犬撲咬三次' },
+  // ---- the demons' arts
+  f咬: { name: '撲咬', kind: 'atk', to: 'one', x: 1.3 },
+  f爪: { name: '連爪', kind: 'atk', to: 'rand2', x: 0.8 },
+  f吼: { name: '咆哮', kind: 'atk', to: 'all', x: 0.65 },
+  f火: { name: '噴火', kind: 'mag', to: 'all', pw: 20, el: 'fire' },
+  f水: { name: '水浪', kind: 'mag', to: 'all', pw: 18, el: 'water' },
+  f風: { name: '妖風', kind: 'mag', to: 'all', pw: 14, el: 'wind', st: 'blind', p: 0.25 },
+  f雷: { name: '掌心雷', kind: 'mag', to: 'one', pw: 34, el: 'thunder' },
+  f石: { name: '飛沙走石', kind: 'mag', to: 'all', pw: 18, el: 'earth' },
+  f毒: { name: '毒牙', kind: 'atk', to: 'one', x: 1.0, st: 'poison', p: 0.6, n: 4 },
+  f眠: { name: '迷香', kind: 'debuff', to: 'all', st: 'sleep', p: 0.3, n: 2 },
+  f縛: { name: '綑仙繩', kind: 'debuff', to: 'one', st: 'stun', p: 0.6, n: 2 },
+  f吸: { name: '吸精', kind: 'atk', to: 'one', x: 1.1, drain: 0.5 },
+  f癒: { name: '妖法回春', kind: 'heal', to: 'self', pct: 0.12 },
+  f護: { name: '妖法護體', kind: 'buff', to: 'self', st: 'guardup', n: 3 },
+  f重: { name: '重擊', kind: 'atk', to: 'one', x: 1.8 },
+  // the great demons' own treasures and arts
+  葫蘆: { name: '紫金紅葫蘆', kind: 'capture', to: 'one', n: 3, p: 0.75, say: '「我叫你一聲，你敢應麼？」' },
+  淨瓶: { name: '羊脂玉淨瓶', kind: 'capture', to: 'one', n: 2, p: 0.7 },
+  幌金繩: { name: '幌金繩', kind: 'debuff', to: 'one', st: 'stun', p: 0.85, n: 3 },
+  三昧火: { name: '三昧真火', kind: 'mag', to: 'all', pw: 70, el: 'fire', st: 'burn', p: 0.3, n: 3 },
+  神風: { name: '三昧神風', kind: 'mag', to: 'all', pw: 40, el: 'wind', st: 'blind', p: 0.8, n: 3 },
+  芭蕉扇: { name: '芭蕉扇', kind: 'capture', to: 'one', n: 3, p: 0.8, el: 'wind', say: '一扇陰風，把人搧得無影無形！' },
+  金剛琢: { name: '金剛琢', kind: 'debuff', to: 'all', st: 'seal', p: 0.9, n: 3, say: '白森森的圈子望空拋起，叫聲「著！」' },
+  人種袋: { name: '人種袋', kind: 'capture', to: 'rand2', n: 3, p: 0.7, say: '舊白布搭包兒往上一拋！' },
+  袖裡: { name: '袖裡乾坤', kind: 'capture', to: 'all', n: 9, p: 1 },
+  紫金鈴: { name: '紫金鈴', kind: 'mag', to: 'all', pw: 60, el: 'fire', st: 'blind', p: 0.4, n: 2, say: '火光、煙光、黃沙一齊噴出！' },
+  金光: { name: '千眼金光', kind: 'mag', to: 'all', pw: 50, el: 'holy', st: 'stun', p: 0.4, n: 1 },
+  倒馬毒: { name: '倒馬毒樁', kind: 'atk', to: 'one', x: 1.6, st: 'poison', p: 1, n: 6 },
+  蛛絲: { name: '天羅地網', kind: 'debuff', to: 'all', st: 'stun', p: 0.4, n: 2 },
+  毒茶: { name: '棗子毒茶', kind: 'debuff', to: 'all', st: 'poison', p: 0.6, n: 5 },
+  二氣瓶: { name: '陰陽二氣瓶', kind: 'capture', to: 'one', n: 3, p: 0.65 },
+  吞: { name: '血盆大口', kind: 'capture', to: 'one', n: 2, p: 0.6, say: '張開大口，一口吞下！' },
+  象鼻: { name: '長鼻捲人', kind: 'atk', to: 'one', x: 1.5, st: 'stun', p: 0.6, n: 1 },
+  移山: { name: '移山倒海', kind: 'atk', to: 'one', x: 2.2, st: 'stun', p: 0.7, n: 2, say: '遣來須彌、峨眉、泰山三座大山壓下！' },
+  九頭: { name: '九頭撲擊', kind: 'atk', to: 'rand6', x: 0.75 },
+  冰封: { name: '寒風大雪', kind: 'mag', to: 'all', pw: 40, el: 'water', st: 'stun', p: 0.25, n: 1 },
+  雷霆: { name: '陰魔雷霆', kind: 'mag', to: 'all', pw: 60, el: 'thunder', st: 'blind', p: 0.3, n: 2 },
+  牛角: { name: '鐵角衝撞', kind: 'atk', to: 'all', x: 1.0 },
+  變化: { name: '七十二變', kind: 'buff', to: 'self', st: 'evade', n: 2 },
+  分身: { name: '身外身法', kind: 'atk', to: 'all', x: 0.8 },
+  千鈞: { name: '千鈞棒', kind: 'atk', to: 'one', x: 2.1 },
+  鐵扇火: { name: '假扇搧火', kind: 'mag', to: 'all', pw: 50, el: 'fire' },
+  搗藥杵: { name: '搗藥杵', kind: 'atk', to: 'rand3', x: 0.9 },
+  火眼: { name: '金光閃閃', kind: 'debuff', to: 'all', st: 'blind', p: 0.4, n: 2 },
+  三山: { name: '三尖兩刃', kind: 'atk', to: 'one', x: 1.9 },
+  金剛套: { name: '金剛琢', kind: 'debuff', to: 'one', st: 'stun', p: 0.9, n: 1 },
+  鈀: { name: '九齒釘鈀', kind: 'atk', to: 'all', x: 0.8 },
+  寶杖: { name: '降妖寶杖', kind: 'atk', to: 'one', x: 1.5 },
+  鉤: { name: '如意鉤', kind: 'atk', to: 'rand2', x: 1.0 },
+  鎗: { name: '火尖鎗', kind: 'atk', to: 'rand3', x: 0.8 },
+  斧: { name: '宣花板斧', kind: 'atk', to: 'one', x: 1.6 },
+  靈鞭: { name: '金鞭', kind: 'atk', to: 'all', x: 0.75 },
+  鐃: { name: '金鐃', kind: 'capture', to: 'one', n: 2, p: 0.6, say: '一副金鐃當頭合下！' },
+};
+
+// ---------------------------------------------------------------- demons and others met in battle
+// hp atk def mag spd as multiples of the level's norm; el: weak to / resists; arts with weights
+const D = (hp, atk, def, mag, spd, arts = [], o = {}) => ({ m: [hp, atk, def, mag, spd], arts, ...o });
+export const FOES = {
+  // the rank and file
+  狼妖: D(1, 1, 0.9, 0.6, 1.2, ['f咬', 'f爪']), 虎妖: D(1.2, 1.15, 1, 0.6, 1, ['f咬', 'f吼']), 熊妖: D(1.4, 1.1, 1.2, 0.5, 0.7, ['f重']),
+  豹妖: D(0.95, 1.1, 0.9, 0.6, 1.35, ['f爪', 'f咬']), 狐妖: D(0.85, 0.85, 0.8, 1.2, 1.1, ['f眠', 'f吸', 'f火']), 蛇妖: D(0.9, 1, 0.9, 1, 1, ['f毒']),
+  鼠妖: D(0.8, 0.9, 0.8, 0.8, 1.3, ['f咬', 'f毒']), 豬妖: D(1.3, 1.1, 1.1, 0.5, 0.8, ['f重']), 牛妖: D(1.4, 1.2, 1.2, 0.5, 0.7, ['f重', 'f吼']),
+  魚妖: D(0.9, 0.9, 0.9, 1, 1, ['f水'], { weak: 'thunder', res: 'water' }), 鱷妖: D(1.2, 1.15, 1.2, 0.6, 0.8, ['f咬'], { res: 'water' }), 蝦兵: D(0.8, 0.95, 1, 0.6, 1, ['f爪'], { res: 'water' }),
+  鳥妖: D(0.85, 1, 0.8, 0.8, 1.5, ['f爪', 'f風']), 獅妖: D(1.3, 1.25, 1.1, 0.6, 1, ['f咬', 'f吼']), 象妖: D(1.6, 1.2, 1.3, 0.5, 0.6, ['f重']),
+  鹿妖: D(0.9, 0.9, 0.9, 1.1, 1.1, ['f雷', 'f癒']), 犀妖: D(1.5, 1.2, 1.4, 0.5, 0.7, ['f重'], { res: 'fire' }), 貂妖: D(0.8, 0.9, 0.8, 1, 1.4, ['f風', 'f咬']),
+  犬妖: D(0.9, 1.05, 0.9, 0.5, 1.4, ['f咬', 'f爪']), 鬼卒: D(0.9, 1, 0.9, 0.8, 1, ['f爪'], { weak: 'holy', res: 'dark' }), 鬼魅: D(0.8, 0.8, 0.7, 1.2, 1.2, ['f吸', 'f風'], { weak: 'holy', res: 'dark' }),
+  妖道: D(0.9, 0.8, 0.8, 1.3, 1, ['f雷', 'f火', 'f癒']), 樹精: D(1.2, 0.9, 1, 1, 0.8, ['f縛', 'f吸'], { weak: 'fire' }), 火妖: D(1, 1, 0.9, 1.2, 1.1, ['f火'], { weak: 'water', res: 'fire' }),
+  小妖: D(0.85, 0.95, 0.85, 0.6, 1, ['f咬']), 天兵: D(1.1, 1.05, 1.1, 0.8, 1, ['f重', 'f雷']), 猴兵: D(0.9, 1, 0.9, 0.6, 1.3, ['f爪']), 強盜: D(1, 1.1, 0.9, 0.3, 1, ['f重']),
+  // the bosses (b: how many times a common foe's life; lv: added to the episode's level)
+  猛虎: D(4.5, 1.1, 1, 0.5, 1, ['f咬', 'f吼'], { boss: 1 }), 六賊: D(1.2, 0.9, 0.9, 0.4, 1.1, ['f重', 'f爪'], { boss: 1 }),
+  混世: D(5, 1.1, 1, 0.6, 0.9, ['f重', 'f吼'], { boss: 1 }),
+  夜叉: D(4.5, 1.15, 1, 0.8, 1, ['f重', 'f水'], { boss: 1, res: 'water' }),
+  牛頭: D(3.5, 1.2, 1.1, 0.5, 0.8, ['f重'], { boss: 1, weak: 'holy' }), 馬面: D(3, 1.1, 1, 0.6, 1.1, ['f爪', 'f吼'], { boss: 1, weak: 'holy' }),
+  巨靈神: D(4.5, 1.3, 1.1, 0.4, 0.7, ['斧', 'f重'], { boss: 1 }), 哪吒: D(5, 1.15, 1, 1, 1.3, ['鎗', 'f火'], { boss: 1, res: 'fire' }),
+  九曜: D(3.5, 1.1, 1, 1, 1, ['f雷', 'f重'], { boss: 1 }), 天王四: D(7, 1.15, 1.1, 1, 1, ['f雷', 'f吼', 'f重'], { boss: 1 }),
+  二郎: D(9, 1.2, 1.2, 1, 1.2, ['三山', '金剛套', 'f雷'], { boss: 1 }),
+  靈官: D(7, 1.2, 1.1, 1, 1.1, ['靈鞭', 'f雷'], { boss: 1 }),
+  白龍: D(6, 1.05, 1, 1, 1.1, ['f水', 'f咬'], { boss: 1, res: 'water', weak: 'thunder' }),
+  凌虛子: D(3.5, 1.05, 1, 1, 1.1, ['f雷', 'f爪'], { boss: 1 }), 熊精: D(7, 1.2, 1.25, 0.6, 0.8, ['f重', 'f吼', 'f護'], { boss: 1 }),
+  八戒: D(7, 1.15, 1.1, 0.6, 0.8, ['鈀', 'f重'], { boss: 1 }),
+  虎先鋒: D(4, 1.15, 1, 0.5, 1.1, ['f咬', 'f爪'], { boss: 1 }), 黃風: D(7, 1.05, 1, 1.2, 1.1, ['神風', 'f爪', 'f石'], { boss: 1, res: 'wind' }),
+  沙僧: D(7, 1.1, 1.2, 0.8, 0.9, ['寶杖', 'f水'], { boss: 1, res: 'water' }),
+  鎮元子: D(20, 1.1, 1.5, 1.2, 1, ['f雷', 'f重'], { boss: 1 }),
+  村姑: D(3, 0.9, 0.9, 1.1, 1.1, ['f吸', 'f眠'], { boss: 1, weak: 'holy' }), 老婦: D(3, 0.9, 0.9, 1.2, 1, ['f吸', 'f風'], { boss: 1, weak: 'holy' }), 老翁: D(3.5, 1, 1, 1.3, 1, ['f吸', 'f雷', 'f風'], { boss: 1, weak: 'holy' }),
+  黃袍: D(8, 1.2, 1.15, 1, 1, ['f重', 'f雷', 'f吼'], { boss: 1 }),
+  狐奶奶: D(3, 0.9, 0.9, 1.2, 1.1, ['f火', 'f眠'], { boss: 1 }),
+  銀角: D(6, 1.1, 1, 1.2, 1.1, ['葫蘆', '移山', 'f重'], { boss: 1 }), 金角: D(7, 1.15, 1.1, 1.2, 1, ['淨瓶', '幌金繩', '鐵扇火', 'f重'], { boss: 1 }),
+  假國王: D(5, 1.1, 1, 1, 1, ['f雷', 'f重'], { boss: 1 }), 青獅: D(7, 1.2, 1.1, 0.6, 1, ['吞', 'f咬', 'f吼'], { boss: 1 }),
+  紅孩兒: D(9, 1.15, 1.05, 1.4, 1.2, ['三昧火', '鎗', 'f火'], { boss: 1, res: 'fire', weak: 'water' }),
+  鼉龍: D(8, 1.15, 1.15, 0.9, 0.9, ['f咬', 'f水'], { boss: 1, res: 'water' }),
+  虎力: D(5, 1.05, 1, 1.1, 1, ['f雷', 'f咬'], { boss: 1 }), 鹿力: D(5, 1, 1, 1.3, 1.1, ['f雷', 'f癒'], { boss: 1 }), 羊力: D(5, 1, 1, 1.3, 1, ['冰封', 'f重'], { boss: 1 }),
+  靈感: D(9, 1.1, 1.1, 1.2, 1, ['冰封', 'f水', 'f重'], { boss: 1, res: 'water', weak: 'thunder' }),
+  兕大王: D(10, 1.2, 1.4, 0.8, 0.9, ['金剛琢', 'f重', '牛角'], { boss: 1 }),
+  如意: D(8, 1.15, 1.1, 1.1, 1, ['鉤', 'f雷'], { boss: 1 }),
+  蠍子: D(9, 1.1, 1.1, 1.1, 1.2, ['倒馬毒', 'f毒', 'f吸'], { boss: 1, weak: 'holy' }),
+  六耳: D(10, 1.25, 1.1, 1, 1.3, ['千鈞', '分身', '變化'], { boss: 1 }),
+  鐵扇: D(8, 1, 1, 1.3, 1.1, ['芭蕉扇', 'f風', 'f重'], { boss: 1, res: 'wind' }),
+  牛魔: D(10, 1.25, 1.2, 1, 1, ['f重', '牛角', 'f吼'], { boss: 1 }), 白牛: D(9, 1.3, 1.3, 0.6, 0.8, ['牛角', 'f重'], { boss: 1 }),
+  萬聖: D(7, 1.1, 1.1, 1.1, 1, ['f水', 'f重'], { boss: 1, res: 'water' }), 九頭蟲: D(11, 1.2, 1.1, 1, 1.3, ['九頭', 'f風', 'f咬'], { boss: 1 }),
+  鯰魚: D(2, 0.9, 0.9, 1, 1, ['f水'], { boss: 1 }),
+  十八公: D(4, 0.85, 1, 1.1, 0.9, ['f縛', 'f雷'], { boss: 1, weak: 'fire' }), 杏仙: D(3, 0.8, 0.9, 1.1, 1.1, ['f眠', 'f吸'], { boss: 1, weak: 'fire' }),
+  黃眉: D(12, 1.2, 1.2, 1.2, 1.1, ['人種袋', '鐃', 'f重'], { boss: 1 }),
+  蟒蛇: D(10, 1.2, 1.15, 0.8, 0.9, ['吞', 'f毒', 'f咬'], { boss: 1 }),
+  賽太歲: D(9.5, 1.15, 1.1, 1.3, 1.1, ['紫金鈴', 'f咬', 'f重'], { boss: 1 }),
+  蜘蛛: D(3, 0.75, 0.9, 0.9, 1.2, ['蛛絲', 'f毒', 'f吸'], { boss: 1, weak: 'fire' }), 百眼: D(11, 1.1, 1.1, 1.4, 1, ['金光', '毒茶', 'f雷'], { boss: 1, weak: 'holy' }),
+  獅魔: D(10, 1.25, 1.15, 0.8, 1, ['吞', 'f咬', 'f吼'], { boss: 1 }), 象魔: D(11, 1.25, 1.3, 0.6, 0.8, ['象鼻', 'f重'], { boss: 1 }), 大鵬: D(9, 1.2, 1.1, 1.1, 1.5, ['二氣瓶', 'f爪', 'f風'], { boss: 1 }),
+  國丈: D(10, 1.1, 1.1, 1.3, 1, ['f雷', 'f癒', 'f重'], { boss: 1 }), 白狐: D(6, 0.9, 0.9, 1.3, 1.2, ['f眠', 'f吸', 'f火'], { boss: 1 }),
+  鼠精: D(12, 1.15, 1.1, 1.2, 1.3, ['f咬', 'f吸', 'f眠'], { boss: 1 }),
+  豹精: D(11, 1.25, 1.1, 0.8, 1.3, ['f爪', 'f咬', 'f吼'], { boss: 1 }),
+  黃獅: D(10, 1.2, 1.15, 0.8, 1, ['f咬', 'f吼', 'f重'], { boss: 1 }), 九靈: D(14, 1.25, 1.2, 1, 1, ['吞', '九頭', 'f吼'], { boss: 1 }),
+  辟寒: D(4.5, 0.95, 1.15, 0.8, 0.9, ['f重', '冰封'], { boss: 1 }), 辟暑: D(4.5, 0.95, 1.15, 0.8, 0.9, ['f重', 'f火'], { boss: 1 }), 辟塵: D(4.5, 0.95, 1.15, 0.8, 0.9, ['f重', 'f石'], { boss: 1 }),
+  玉兔: D(13, 1.15, 1.1, 1.2, 1.4, ['搗藥杵', 'f眠'], { boss: 1 }),
+  陰魔: D(14, 1.2, 1.15, 1.4, 1.1, ['雷霆', 'f風', 'f吸'], { boss: 1, weak: 'holy' }),
+};
+
+// ---------------------------------------------------------------- things
+// heal (hp), mp, revive, cure, buff; tier sets the price and when the shops carry it
+export const ITEMS = {
+  仙桃: { name: '仙桃', kind: 'heal', pw: 80, price: 20, desc: '花果山的仙桃，回復 80 兵氣' },
+  金丹: { name: '金丹', kind: 'heal', pw: 300, price: 90, desc: '老君爐裡的金丹，回復 300' },
+  蟠桃: { name: '蟠桃', kind: 'heal', pw: 1200, price: 360, desc: '王母的蟠桃，回復 1200' },
+  人參果: { name: '人參果', kind: 'healAll', pw: 9999, price: 0, desc: '聞一聞活三百六十歲：全體完全回復' },
+  甘露: { name: '甘露', kind: 'mp', pw: 30, price: 60, desc: '回復 30 法力' },
+  玉露: { name: '玉露瓊漿', kind: 'mp', pw: 120, price: 240, desc: '回復 120 法力' },
+  還魂丹: { name: '還魂丹', kind: 'revive', pct: 0.4, price: 160, desc: '救活一位倒下的同伴' },
+  九轉丹: { name: '九轉還魂丹', kind: 'revive', pct: 1, price: 700, desc: '救活一位倒下的同伴並完全回復' },
+  解毒丹: { name: '解毒丹', kind: 'cure', price: 30, desc: '解除一位同伴的異常狀態' },
+  素齋: { name: '素齋', kind: 'healAll', pw: 160, price: 70, desc: '施主布施的素齋，全體回復 160' },
+  茶果: { name: '茶果', kind: 'healAll', pw: 500, price: 240, desc: '全體回復 500' },
+  // the pilgrims' own things of the story
+  定風丹: { name: '定風丹', kind: 'key', desc: '靈吉菩薩的寶貝：不怕妖風，不被搧走' },
+};
+// to wear: armour (def / hp) and charms; who: which pilgrims may wear it (all if absent)
+export const GEAR = {
+  布衣: { name: '粗布直裰', slot: 'body', def: 4, price: 40 },
+  皮襖: { name: '羊皮襖', slot: 'body', def: 9, price: 120 },
+  藤甲: { name: '藤甲', slot: 'body', def: 16, price: 300 },
+  鎖子甲: { name: '鎖子甲', slot: 'body', def: 26, price: 700 },
+  銀鱗甲: { name: '銀鱗甲', slot: 'body', def: 38, price: 1500 },
+  天蠶衣: { name: '天蠶衣', slot: 'body', def: 50, hp: 60, price: 3000 },
+  雲錦衣: { name: '雲錦法衣', slot: 'body', def: 64, mag: 10, price: 5200 },
+  金縷衣: { name: '金縷玉衣', slot: 'body', def: 80, hp: 120, price: 8500 },
+  菩提衣: { name: '菩提法衣', slot: 'body', def: 98, hp: 200, mag: 20, price: 13000 },
+  鎖子黃金甲: { name: '鎖子黃金甲', slot: 'body', def: 34, hp: 40, price: 0, who: ['悟空'] },
+  錦襴袈裟: { name: '錦襴袈裟', slot: 'body', def: 22, mag: 12, price: 0, who: ['唐僧'] },
+  鳳翅紫金冠: { name: '鳳翅紫金冠', slot: 'acc', atk: 12, def: 8, price: 0, who: ['悟空'] },
+  念珠: { name: '菩提念珠', slot: 'acc', mag: 8, mp: 10, price: 200 },
+  護身符: { name: '護身符', slot: 'acc', def: 8, price: 160 },
+  虎牙: { name: '虎牙墜', slot: 'acc', atk: 10, price: 260 },
+  避火珠: { name: '避火珠', slot: 'acc', def: 4, res: 'fire', price: 900 },
+  避水珠: { name: '避水珠', slot: 'acc', def: 4, res: 'water', price: 900 },
+  定顏珠: { name: '定顏珠', slot: 'acc', def: 10, ward: 'poison', price: 1200 },
+  風火輪: { name: '風火輪', slot: 'acc', spd: 16, price: 1800 },
+  照妖鏡: { name: '照妖鏡', slot: 'acc', atk: 18, hit: 0.1, price: 2600 },
+  紫金鉢: { name: '紫金缽盂', slot: 'acc', mag: 24, mp: 30, price: 3600 },
+  金剛圈: { name: '金剛圈', slot: 'acc', def: 24, ward: 'seal', price: 4200 },
+  夜明珠: { name: '夜明珠', slot: 'acc', atk: 24, def: 12, ward: 'blind', price: 6000 },
+  舍利子: { name: '舍利子', slot: 'acc', mag: 40, mp: 60, ward: 'stun', price: 9000 },
+};
+// what each tier of shop sells (towns are numbered by when they come)
+export const SHOP = [
+  [],
+  ['仙桃', '甘露', '解毒丹', '布衣', '皮襖', '念珠', '護身符'],
+  ['仙桃', '甘露', '解毒丹', '素齋', '皮襖', '藤甲', '念珠', '護身符', '虎牙'],
+  ['仙桃', '金丹', '甘露', '還魂丹', '解毒丹', '素齋', '藤甲', '鎖子甲', '虎牙', '避火珠'],
+  ['金丹', '甘露', '還魂丹', '解毒丹', '素齋', '鎖子甲', '銀鱗甲', '避火珠', '避水珠'],
+  ['金丹', '甘露', '還魂丹', '解毒丹', '素齋', '銀鱗甲', '天蠶衣', '避水珠', '定顏珠', '風火輪'],
+  ['金丹', '玉露', '還魂丹', '解毒丹', '茶果', '天蠶衣', '雲錦衣', '定顏珠', '風火輪', '照妖鏡'],
+  ['金丹', '蟠桃', '玉露', '還魂丹', '解毒丹', '茶果', '雲錦衣', '金縷衣', '照妖鏡', '紫金鉢'],
+  ['蟠桃', '玉露', '九轉丹', '解毒丹', '茶果', '金縷衣', '紫金鉢', '金剛圈', '夜明珠'],
+  ['蟠桃', '玉露', '九轉丹', '解毒丹', '茶果', '金縷衣', '菩提衣', '金剛圈', '夜明珠', '舍利子'],
+];
+// what turns up in chests, by how far along the road
+export const CHEST = [['仙桃', '甘露', '解毒丹', 'gold'], ['金丹', '甘露', '還魂丹', 'gold'], ['金丹', '玉露', '還魂丹', '茶果', 'gold'], ['蟠桃', '玉露', '九轉丹', '茶果', 'gold']];
+
+// ---------------------------------------------------------------- 八十一難（第九十九回，觀音菩薩呈上的災難簿子）
+export const NAN = ['金蟬遭貶', '出胎幾殺', '滿月拋江', '尋親報冤', '出城逢虎', '折從落坑', '雙叉嶺上', '兩界山頭', '陡澗換馬', '夜被火燒',
+  '失卻袈裟', '收降八戒', '黃風怪阻', '請求靈吉', '流沙難渡', '收得沙僧', '四聖顯化', '五莊觀中', '難活人參', '貶退心猿',
+  '黑松林失散', '寶象國捎書', '金鑾殿變虎', '平頂山逢魔', '蓮花洞高懸', '烏雞國救主', '被魔化身', '號山逢怪', '風攝聖僧', '心猿遭害',
+  '請聖降妖', '黑河沉沒', '搬運車遲', '大賭輸贏', '祛道興僧', '路逢大水', '身落天河', '魚籃現身', '金兜山遇怪', '普天神難伏',
+  '問佛根源', '吃水遭毒', '西梁國留婚', '琵琶洞受苦', '再貶心猿', '難辨獼猴', '路阻火焰山', '求取芭蕉扇', '收縛魔王', '賽城掃塔',
+  '取寶救僧', '棘林吟詠', '小雷音遇難', '諸天神遭困', '稀柿衕穢阻', '朱紫國行醫', '拯救疲癃', '降妖取后', '七情迷沒', '多目遭傷',
+  '路阻獅駝', '怪分三色', '城裡遇災', '請佛收魔', '比丘救子', '辨認真邪', '松林救怪', '僧房臥病', '無底洞遭困', '滅法國難行',
+  '隱霧山遇魔', '鳳仙郡求雨', '失落兵器', '會慶釘鈀', '竹節山遭難', '玄英洞受苦', '趕捉犀牛', '天竺招婚', '銅台府監禁', '凌雲渡脫胎', '通天河落水'];

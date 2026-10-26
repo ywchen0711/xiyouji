@@ -1,0 +1,80 @@
+/* --s is the size of one pixel of the game's 384×224 picture, so the windows grow with the screen */
+:root { --s: 3; --win1: #5a2418; --win2: #241008; --edge: #e8d09a; --txt: #fff8ec; --gold: #ffd870; --red: #c8402a; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #0a0604; color: var(--txt); overflow: hidden; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; -webkit-user-select: none; user-select: none; touch-action: none; }
+#stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+#cv { image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+#ui { position: absolute; left: 50%; top: 50%; width: calc(var(--s) * 384px); height: calc(var(--s) * 224px); transform: translate(-50%, -50%); font-size: calc(var(--s) * 7.4px); pointer-events: none; overflow: hidden; }
+#ui > * { pointer-events: auto; }
+/* the windows: lacquer red with a gilt edge */
+.win { position: absolute; background: linear-gradient(180deg, var(--win1), var(--win2)); border: calc(var(--s) * 1px) solid var(--edge); outline: calc(var(--s) * 0.7px) solid #120604; border-radius: calc(var(--s) * 2px); box-shadow: 0 0 0 calc(var(--s) * 1.4px) #8a4a28 inset, 0 calc(var(--s) * 2px) calc(var(--s) * 6px) rgba(0, 0, 0, .6); padding: calc(var(--s) * 4px) calc(var(--s) * 6px); }
+.win small { opacity: .75; font-size: .82em; }
+/* dialogue */
+.talk { left: calc(var(--s) * 6px); right: calc(var(--s) * 6px); bottom: calc(var(--s) * 6px); min-height: calc(var(--s) * 58px); display: flex; gap: calc(var(--s) * 6px); align-items: flex-start; cursor: pointer; z-index: 30; }
+.talk .tface { width: calc(var(--s) * 46px) !important; height: calc(var(--s) * 57.5px) !important; border-radius: calc(var(--s) * 1px); flex: none; border: calc(var(--s) * 0.7px) solid var(--edge); }
+.talk .tbody { flex: 1; } .talk .tname { color: var(--gold); font-weight: 900; margin-bottom: calc(var(--s) * 1.5px); font-size: 1.05em; } .talk .tname small { color: #f0c8a0; font-weight: 700; margin-left: .5em; }
+.talk .ttext { font-size: 1.12em; line-height: 1.62; font-family: "Noto Serif TC", serif; font-weight: 700; white-space: pre-wrap; }
+.talk.narr .ttext { color: #f4ead6; }
+.talk .tmore { position: absolute; right: calc(var(--s) * 6px); bottom: calc(var(--s) * 3px); opacity: 0; color: var(--gold); } .talk .tmore.on { opacity: 1; animation: blink 0.8s infinite; }
+@keyframes blink { 50% { opacity: .2; } }
+/* menus */
+.menu { right: calc(var(--s) * 8px); top: calc(var(--s) * 10px); min-width: calc(var(--s) * 84px); max-width: calc(var(--s) * 230px); max-height: calc(var(--s) * 204px); display: flex; flex-direction: column; z-index: 20; }
+.menu .mtitle { color: var(--gold); font-weight: 900; margin-bottom: calc(var(--s) * 2px); border-bottom: calc(var(--s) * 0.5px) solid rgba(232, 208, 154, .35); padding-bottom: calc(var(--s) * 1.5px); white-space: nowrap; }
+.menu .mlist { overflow-y: auto; scrollbar-width: thin; }
+.menu .mrow { display: flex; gap: 1em; justify-content: space-between; padding: calc(var(--s) * 1px) calc(var(--s) * 3px) calc(var(--s) * 1px) calc(var(--s) * 9px); cursor: pointer; position: relative; white-space: nowrap; border-radius: calc(var(--s) * 1px); }
+.menu .mrow.on { background: rgba(255, 220, 160, .16); } .menu .mrow.on::before { content: '▶'; position: absolute; left: calc(var(--s) * 1px); color: var(--gold); font-size: .8em; top: 50%; transform: translateY(-50%); }
+.menu .mrow.off { opacity: .4; } .menu .mh { opacity: .8; font-variant-numeric: tabular-nums; }
+.menu .mfoot { margin-top: calc(var(--s) * 2px); padding-top: calc(var(--s) * 1.5px); border-top: calc(var(--s) * 0.5px) solid rgba(232, 208, 154, .35); font-size: .86em; color: #f0dcc0; white-space: normal; min-height: 2.4em; }
+.menu.small { left: 50%; right: auto; top: 40%; transform: translateX(-50%); }
+.menu.main { left: auto; right: calc(var(--s) * 8px); }
+.menu.place { left: calc(var(--s) * 8px); right: auto; }
+.menu.order { left: calc(var(--s) * 8px); right: auto; }
+.menu.wide { min-width: calc(var(--s) * 150px); max-width: calc(var(--s) * 200px); }
+.menu.shop { left: calc(var(--s) * 8px); right: calc(var(--s) * 8px); max-width: none; max-height: calc(var(--s) * 206px); top: calc(var(--s) * 8px); }
+.menu.tmenu { left: 50%; right: auto; top: 64%; transform: translateX(-50%); min-width: calc(var(--s) * 80px); text-align: center; }
+.toast { position: absolute; left: 50%; top: calc(var(--s) * 16px); transform: translateX(-50%); background: rgba(40, 14, 8, .92); border: calc(var(--s) * 0.7px) solid var(--edge); border-radius: calc(var(--s) * 3px); padding: calc(var(--s) * 2px) calc(var(--s) * 8px); font-weight: 700; z-index: 50; white-space: nowrap; animation: fade 2.6s forwards; pointer-events: none !important; }
+@keyframes fade { 0% { opacity: 0; transform: translate(-50%, -6px); } 10%, 80% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; } }
+.banner { position: absolute; left: 0; right: 0; top: 40%; text-align: center; font: 900 calc(var(--s) * 13px) "Noto Serif TC", serif; color: var(--gold); text-shadow: 0 0 calc(var(--s) * 3px) #000, 0 calc(var(--s) * 1px) 0 #5a1a0a; background: linear-gradient(90deg, transparent, rgba(40, 10, 4, .88), transparent); padding: calc(var(--s) * 4px) 0; z-index: 40; pointer-events: none !important; animation: bannerIn .4s ease-out; }
+.banner.boss { color: #ff9a7a; letter-spacing: .2em; }
+.banner.chapter { top: 30%; padding: calc(var(--s) * 8px) 0; } .banner .hui { font-size: .55em; letter-spacing: .4em; color: #f0d8b0; } .banner .ht { font-size: 1.35em; letter-spacing: .15em; margin: calc(var(--s) * 2px) 0; } .banner .hp { font-size: .5em; letter-spacing: .5em; color: #f0d8b0; }
+@keyframes bannerIn { from { opacity: 0; transform: scaleX(.8); } }
+.panel { left: calc(var(--s) * 20px); right: calc(var(--s) * 20px); top: calc(var(--s) * 12px); bottom: calc(var(--s) * 12px); overflow-y: auto; z-index: 25; }
+.panel .ptitle { color: var(--gold); font-weight: 900; margin-bottom: calc(var(--s) * 3px); font-size: 1.1em; }
+.nan { display: grid; grid-template-columns: repeat(5, 1fr); gap: calc(var(--s) * 1px) calc(var(--s) * 3px); font-size: .8em; } .nan span { opacity: .45; white-space: nowrap; overflow: hidden; } .nan span.on { opacity: 1; } .nan i { font-style: normal; color: #e8a080; margin-right: .3em; font-size: .85em; } .nan span.on i { color: var(--gold); }
+.detail { left: calc(var(--s) * 8px); right: calc(var(--s) * 8px); top: calc(var(--s) * 10px); display: flex; gap: calc(var(--s) * 6px); z-index: 26; cursor: pointer; }
+.detail canvas { width: calc(var(--s) * 70px) !important; height: calc(var(--s) * 87.5px) !important; border: calc(var(--s) * 0.7px) solid var(--edge); flex: none; }
+.dinfo { flex: 1; line-height: 1.55; } .dname { color: var(--gold); font-weight: 900; font-size: 1.15em; } .dstats { display: grid; grid-template-columns: repeat(3, 1fr); margin: calc(var(--s) * 1px) 0; } .dstats b { color: var(--gold); } .dtac { font-size: .88em; color: #f0d8c0; } .dhint { font-size: .75em; opacity: .6; margin-top: calc(var(--s) * 2px); }
+/* battle: the pilgrims' windows along the bottom */
+#bhud { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--s) * 52px); display: flex; gap: calc(var(--s) * 3px); padding: calc(var(--s) * 3px); pointer-events: none !important; --fl: #fff; }
+#bhud { justify-content: center; }
+#bhud .bpan { position: relative; flex: 1; max-width: calc(var(--s) * 96px); padding: calc(var(--s) * 2.5px) calc(var(--s) * 3px); display: flex; gap: calc(var(--s) * 3px); overflow: visible; transition: transform .15s; }
+#bhud .bface { width: calc(var(--s) * 30px) !important; height: calc(var(--s) * 37.5px) !important; border: calc(var(--s) * 0.5px) solid var(--edge); border-radius: calc(var(--s) * 1px); flex: none; }
+#bhud .binfo { flex: 1; min-width: 0; font-size: .86em; line-height: 1.15; }
+.bn { display: flex; gap: .3em; align-items: baseline; white-space: nowrap; overflow: hidden; } .bn b { color: #fff; } .bn small { font-size: .8em; } .bn u { text-decoration: none; color: #a8ffe0; font-size: .85em; } .bn u.bad { color: #e8a0ff; }
+.bbar { height: calc(var(--s) * 2px); background: #000; margin-top: calc(var(--s) * 1.5px); border-radius: calc(var(--s) * 1px); overflow: hidden; } .bbar i { display: block; height: 100%; background: linear-gradient(90deg, #3ab83a, #a8f07a); transition: width .3s; } .bbar.mp i { background: linear-gradient(90deg, #2a6ad8, #7ac0ff); }
+.bnum { font-variant-numeric: tabular-nums; text-align: right; font-size: .95em; } .bnum.mp { color: #a8d0ff; }
+.bpan.mk { box-shadow: 0 0 0 calc(var(--s) * 1.4px) #8a4a28 inset, 0 0 calc(var(--s) * 4px) var(--gold); transform: translateY(calc(var(--s) * -3px)); }
+.bpan.down { filter: grayscale(1) brightness(.6); } .bpan.capt { opacity: .45; }
+.bpan.lunge { transform: translateY(calc(var(--s) * -8px)); }
+.bpan.hurt { animation: hurt .35s; } @keyframes hurt { 20% { transform: translateX(calc(var(--s) * -3px)); } 40% { transform: translateX(calc(var(--s) * 3px)); } 60% { transform: translateX(calc(var(--s) * -2px)); } }
+.bpan.flash::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: var(--fl); opacity: 0; animation: flash .45s; pointer-events: none; } @keyframes flash { 15% { opacity: .55; } }
+.bpop { position: absolute; left: 50%; top: 10%; transform: translateX(-50%); font: 900 calc(var(--s) * 9px) "Noto Sans TC", sans-serif; text-shadow: 0 0 calc(var(--s) * 1px) #000, calc(var(--s) * 0.6px) calc(var(--s) * 0.6px) 0 #000; animation: pop .9s forwards; white-space: nowrap; z-index: 5; }
+@keyframes pop { 0% { opacity: 0; transform: translate(-50%, 0); } 15% { opacity: 1; transform: translate(-50%, calc(var(--s) * -10px)); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, calc(var(--s) * -14px)); } }
+.menu.bcmd { right: auto; z-index: 22; }
+#bbanner { left: 50%; top: calc(var(--s) * 4px); transform: translateX(-50%); font-weight: 900; color: var(--gold); white-space: nowrap; z-index: 21; pointer-events: none !important; padding: calc(var(--s) * 2px) calc(var(--s) * 8px); }
+.bautotag { position: absolute; right: calc(var(--s) * 6px); top: calc(var(--s) * 4px); color: #ff9a6a; font-weight: 900; text-shadow: 0 0 calc(var(--s) * 2px) #000; animation: blink 1s infinite; pointer-events: none !important; z-index: 21; }
+/* title and ending */
+.titlebox { position: absolute; left: 0; right: 0; top: calc(var(--s) * 26px); text-align: center; pointer-events: none !important; }
+.titlebox .tzh { font: 900 calc(var(--s) * 40px) "Noto Serif TC", serif; color: var(--gold); letter-spacing: .2em; text-shadow: 0 calc(var(--s) * 1.5px) 0 #6a1a0a, 0 0 calc(var(--s) * 10px) rgba(0, 0, 0, .7); }
+.titlebox .ten { font: 900 calc(var(--s) * 6.5px) "Noto Serif TC", serif; letter-spacing: .6em; color: #6a3a1a; margin-top: calc(var(--s) * 1px); }
+.titlebox .tsub { margin-top: calc(var(--s) * 5px); color: #8a2a1a; font: 900 calc(var(--s) * 11px) "Noto Serif TC", serif; letter-spacing: .6em; }
+.endp { text-align: center; } .endp p { line-height: 1.9; font-family: "Noto Serif TC", serif; font-weight: 700; } .endp .small { font-size: .85em; opacity: .85; }
+.endfaces { display: flex; justify-content: center; gap: calc(var(--s) * 4px); } .endfaces canvas { width: calc(var(--s) * 44px) !important; height: calc(var(--s) * 55px) !important; border: calc(var(--s) * 0.6px) solid var(--edge); }
+/* the touch pad: only on touch screens */
+#pad { display: none; }
+@media (pointer: coarse) {
+  #pad { display: block; position: fixed; inset: auto 0 0 0; height: 0; z-index: 60; }
+  #pad button { position: fixed; background: rgba(255, 255, 255, .14); border: 2px solid rgba(255, 255, 255, .35); color: #fff; border-radius: 50%; font-size: 22px; touch-action: none; }
+  .dpad button { width: 58px; height: 58px; } .dpad [data-k=up] { left: 72px; bottom: 132px; } .dpad [data-k=down] { left: 72px; bottom: 16px; } .dpad [data-k=left] { left: 14px; bottom: 74px; } .dpad [data-k=right] { left: 130px; bottom: 74px; }
+  .abtn .a { right: 20px; bottom: 70px; width: 70px; height: 70px; background: rgba(232, 80, 60, .4); } .abtn .b { right: 100px; bottom: 26px; width: 60px; height: 60px; } .abtn .m { right: 20px; bottom: 160px; width: 64px; height: 40px; border-radius: 14px; font-size: 15px; }
+}
