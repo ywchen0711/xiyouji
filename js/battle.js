@@ -30,7 +30,7 @@ export class Battle {
     // two of a kind are told apart
     const seen = {}; for (const f of this.foes) { seen[f.name] = (seen[f.name] || 0) + 1; } const cnt = {}; for (const f of this.foes) if (seen[f.name] > 1) { cnt[f.name] = (cnt[f.name] || 0) + 1; f.name += '甲乙丙丁戊'[cnt[f.name] - 1]; }
     this.foes.forEach((f) => { f.art = portrait(f.id); f.flash = 0; f.shake = 0; f.alpha = 0; f.dead = 0; });
-    this.layout(); this.bg = backdrop(o.theme || 'mount');
+    this.layout(); this.bg = backdrop(o.theme || 'mount', o.ep);
   }
   layout() {
     const live = this.foes, n = live.length, W = 384;
@@ -43,7 +43,7 @@ export class Battle {
   // ---------------------------------------------------------------- drawing (the canvas: field, demons, effects)
   render(g, t) {
     const now = performance.now(), dt = (now - this.t0) / 1000;
-    g.drawImage(this.bg, 0, 0, 384, 224);
+    g.imageSmoothingEnabled = false; g.drawImage(this.bg, 0, 0, 384, 224);
     for (const [i, f] of this.foes.entries()) {
       if (f.dead > 1.2) continue; const b = f.box; f.alpha = Math.min(1, f.alpha + 0.06);
       const bob = Math.sin(dt * 1.6 + i) * 1.2, sx = f.shake > 0 ? Math.sin(now / 22) * f.shake : 0; f.shake = Math.max(0, f.shake - 0.4);
@@ -52,7 +52,7 @@ export class Battle {
       // a shadow on the ground, the painted bust in its frame, a glow for the great
       g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(b.x + b.w / 2 + sx, b.y + b.h + 3, b.w * 0.45, 3.5, 0, 0, 7); g.fill();
       if (f.boss && this.o.boss) { const gl = g.createRadialGradient(b.x + b.w / 2, b.y + b.h / 2, b.w * 0.3, b.x + b.w / 2, b.y + b.h / 2, b.w * 0.9); gl.addColorStop(0, 'rgba(255,60,40,0.18)'); gl.addColorStop(1, 'rgba(255,60,40,0)'); g.fillStyle = gl; g.fillRect(b.x - b.w * 0.4, b.y - b.h * 0.3, b.w * 1.8, b.h * 1.6); }
-      g.imageSmoothingEnabled = true; g.drawImage(f.art, b.x + sx, b.y + bob - (f.lunge || 0), b.w, b.h); g.imageSmoothingEnabled = false;
+      g.imageSmoothingEnabled = false; g.drawImage(f.art, b.x + sx, b.y + bob - (f.lunge || 0), b.w, b.h);
       if (f.flash > 0) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = f.flash; g.drawImage(f.art, b.x + sx, b.y + bob, b.w, b.h); g.globalCompositeOperation = 'source-over'; f.flash = Math.max(0, f.flash - 0.08); }
       g.restore();
       if (f.lunge) f.lunge = Math.max(0, f.lunge - 0.8);

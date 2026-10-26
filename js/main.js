@@ -41,7 +41,7 @@ function draw(t) {
   g.setTransform(K, 0, 0, K, 0, 0); g.imageSmoothingEnabled = false;
   if (scene === 'battle' && battle) { battle.render(g, t); return; }
   if (scene === 'map' && M) { const cam = { x: clamp(P.fx * TS + 8 - LW / 2, 0, M.w * TS - LW), y: clamp(P.fy * TS + 8 - LH / 2, 0, M.h * TS - LH) }; drawMap(g, M, cam, walkers(), t, { opened: S.opened[STORY[S.ep]?.id] || [], goal: exploring?.goal }); return; }
-  g.drawImage(backdrop(stageBg), 0, 0, LW, LH);
+  g.imageSmoothingEnabled = false; g.drawImage(backdrop(stageBg, S && STORY[S.ep]?.id), 0, 0, LW, LH);
   if (scene === 'title') { const k = t / 4000; g.fillStyle = 'rgba(255,240,200,0.1)'; for (let i = 0; i < 6; i++) { g.beginPath(); g.ellipse(((i * 80 + k * 30) % 460) - 40, 150 + Math.sin(i) * 20, 60, 10, 0, 0, 7); g.fill(); } }
   if (scene === 'story') { g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(0, 0, LW, LH); }
 }
@@ -111,7 +111,7 @@ async function tryMove(dx, dy) {
 }
 async function wildFight(e) {
   const R = rng(Date.now() >>> 0), n = R.int(1, party().length === 1 ? 2 : Math.min(4, party().length + 1 + (R() < 0.3 ? 1 : 0))), foes = Array.from({ length: n }, () => R.pick(e.map.foes));
-  const r = await fight({ foes, lv: Math.max(1, epLv(S.ep) - 1 + R.int(-1, 1)), theme: e.map.theme });
+  const r = await fight({ foes, lv: Math.max(1, epLv(S.ep) - 1 + R.int(-1, 1)), theme: e.map.theme, ep: e.id });
   if (r.end === 'lose') await gameOver(); else save();
 }
 async function interact() {
@@ -132,7 +132,7 @@ async function reachEnd() {
       if (st.pre) await say(lines(st.pre), sayOpt());
       for (const it of st.give || []) toast(`得到了「${give(it)}」`);
       if (st.party) for (const id of st.party) if (S.units[id]) heal(S.units[id]); // a fight apart from the others comes after a break in the tale
-      const r = await fight({ foes: st.foes, lv: epLv(S.ep), theme: e.map.theme, boss: true, scripted: st.scripted, party: st.party, guest: st.guest, hpK: st.hpK });
+      const r = await fight({ foes: st.foes, lv: epLv(S.ep), theme: e.map.theme, ep: e.id, boss: true, scripted: st.scripted, party: st.party, guest: st.guest, hpK: st.hpK });
       if (r.end === 'lose' && !st.lose) { await gameOver(); return; }
       if (r.end === 'story' || r.end === 'lose') for (const id of Object.keys(S.units)) { const u = S.units[id], s2 = stats(u, S.flags); u.hp = Math.max(u.hp, Math.round(s2.hp * 0.5)); u.mp = Math.max(u.mp, Math.round(s2.mp * 0.5)); }
       learn(st.learn);
@@ -147,7 +147,7 @@ async function fight(o) {
   const ids = (o.party || party()).filter((id) => S.units[id]), guestIds = [...new Set([...(S.guests || []), ...(o.guest || [])])], guestUnits = {};
   for (const id of guestIds) { guestUnits[id] = newUnit(id, Math.max(1, epLv(S.ep) + 2)); }
   for (const id of ids) { const u = S.units[id]; if (u.hp <= 0 && o.boss) u.hp = 1; }
-  battle = new Battle({ S, faceFor, party: [...ids, ...guestIds], guestUnits, foes: o.foes, lv: o.lv, theme: o.theme, boss: o.boss, scripted: o.scripted, hpK: o.hpK });
+  battle = new Battle({ S, faceFor, party: [...ids, ...guestIds], guestUnits, foes: o.foes, lv: o.lv, theme: o.theme, ep: o.ep, boss: o.boss, scripted: o.scripted, hpK: o.hpK });
   const r = await battle.run(); battle = null; scene = prev === 'battle' ? 'map' : prev; music(THEMES[stageBg]?.music || 'road');
   if (r.end !== 'lose') for (const id of ids) { const u = S.units[id]; if (u.hp <= 0) u.hp = 1; }
   return r;

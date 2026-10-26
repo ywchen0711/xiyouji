@@ -4,7 +4,7 @@
 <script type="module">
 import { backdrop } from './js/art.js'; import { portrait } from './js/portrait.js';
 const c = document.getElementById('c'), g = c.getContext('2d');
-g.drawImage(backdrop('heaven'), 0, 0, 960, 560);
+g.imageSmoothingEnabled = false; g.drawImage(backdrop('heaven'), 0, 0, 960, 560);
 const ids = ['八戒', '悟空', '唐僧', '悟淨'], xs = [70, 280, 490, 700];
 ids.forEach((id, i) => { const p = portrait(id); const w = 190, h = 238, y = 250 - (i === 1 || i === 2 ? 26 : 0); g.save(); g.shadowColor = 'rgba(0,0,0,0.6)'; g.shadowBlur = 20; g.drawImage(p, xs[i], y, w, h); g.restore(); g.strokeStyle = '#e8d09a'; g.lineWidth = 3; g.strokeRect(xs[i], y, w, h); });
 await document.fonts.load('900 120px "Noto Serif TC"');

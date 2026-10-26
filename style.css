@@ -78,3 +78,6 @@ html, body { margin: 0; height: 100%; background: #0a0604; color: var(--txt); ov
   .dpad button { width: 58px; height: 58px; } .dpad [data-k=up] { left: 72px; bottom: 132px; } .dpad [data-k=down] { left: 72px; bottom: 16px; } .dpad [data-k=left] { left: 14px; bottom: 74px; } .dpad [data-k=right] { left: 130px; bottom: 74px; }
   .abtn .a { right: 20px; bottom: 70px; width: 70px; height: 70px; background: rgba(232, 80, 60, .4); } .abtn .b { right: 100px; bottom: 26px; width: 60px; height: 60px; } .abtn .m { right: 20px; bottom: 160px; width: 64px; height: 40px; border-radius: 14px; font-size: 15px; }
 }
+
+/* the portraits are pixel art: keep the squares sharp */
+#ui canvas, .bface, .tface, .detail canvas, .endfaces canvas { image-rendering: pixelated; }
