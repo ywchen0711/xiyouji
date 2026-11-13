@@ -14,6 +14,9 @@ import { rng, clamp, esc, wait } from './util.js';
 
 const ST = { poison: '毒', burn: '灼', stun: '定', sleep: '睡', blind: '盲', seal: '封', capt: '收', evade: '變', focus: '眼', rage: '箍', guardup: '堅', taunt: '挑', cover: '護', barrier: '蟬' };
 const BAD = ['poison', 'burn', 'stun', 'sleep', 'blind', 'seal'];
+// each status's colour, for the little tags on the pilgrims' windows and over the demons
+const STC = { poison: '#3a8a2a', burn: '#c04a18', stun: '#a08018', sleep: '#4a4ab0', blind: '#3a3a4a', seal: '#7a2aa0', capt: '#a02a6a', evade: '#1a7a8a', focus: '#2a6aa8', rage: '#b02a2a', guardup: '#2a5a9a', taunt: '#a8601a', cover: '#3a7a4a', barrier: '#6a8a2a' };
+const stList = (b) => Object.keys(b.st).filter((k) => b.st[k] > 0 && ST[k]);
 const ELC = { fire: '#ff7a30', water: '#4ab0ff', wind: '#c8f0c0', thunder: '#ffe860', earth: '#c8a060', holy: '#fff2b0', dark: '#a060ff', poison: '#7ad040' };
 
 export class Battle {
@@ -77,7 +80,7 @@ export class Battle {
       if (!f.dead && (f.hp > 0 || f.hpShow > 0.5)) {
         const hv = Math.max(0, f.hpShow) / f.max; g.fillStyle = 'rgba(0,0,0,0.55)'; g.fillRect(b.x, b.y + b.h + 6, b.w, 3); g.fillStyle = 'rgba(255,240,220,0.85)'; g.fillRect(b.x, b.y + b.h + 6, b.w * Math.max(0, f.hpLag) / f.max, 3); g.fillStyle = hv > 0.5 ? '#e8c040' : hv > 0.2 ? '#e88030' : '#e83a30'; g.fillRect(b.x, b.y + b.h + 6, b.w * hv, 3);
         g.font = '700 6px "Noto Sans TC", sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(f.name, b.x + b.w / 2 + 0.5, b.y + b.h + 15.5); g.fillStyle = f.boss ? '#ffd870' : '#f0ecd8'; g.fillText(f.name, b.x + b.w / 2, b.y + b.h + 15);
-        const sts = Object.keys(f.st).filter((k) => f.st[k] > 0 && ST[k]); if (sts.length) { g.fillStyle = '#e8a0ff'; g.fillText(sts.map((k) => ST[k]).join(''), b.x + b.w / 2, b.y - 2); }
+        const sts = stList(f); if (sts.length) { const tw = 8, x0 = Math.round(b.x + b.w / 2 - sts.length * tw / 2), y0 = b.y - 9; sts.forEach((k, j) => { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(x0 + j * tw - 0.5, y0 - 0.5, tw, 8); g.fillStyle = STC[k] || '#6a3a8a'; g.fillRect(x0 + j * tw, y0, tw - 1, 7); g.fillStyle = '#fff'; g.fillText(ST[k], x0 + j * tw + (tw - 1) / 2, y0 + 6); }); }
         if (this.cursor === i) { const cx = b.x + b.w / 2, cy = b.y - 6 + Math.sin(now / 120) * 2; g.fillStyle = '#ffe070'; g.beginPath(); g.moveTo(cx - 5, cy - 6); g.lineTo(cx + 5, cy - 6); g.lineTo(cx, cy); g.fill(); g.strokeStyle = 'rgba(255,224,112,0.8)'; g.lineWidth = 1; g.strokeRect(b.x - 1.5, b.y - 1.5, b.w + 3, b.h + 3); }
       }
     }
@@ -109,10 +112,10 @@ export class Battle {
   hud() {
     let h = $('bhud'); if (!h) { h = el('div', ''); h.id = 'bhud'; $('ui').appendChild(h); this.faces = {}; }
     if (h.children.length !== this.allies.length) { h.innerHTML = ''; for (const a of this.allies) { const p = el('div', 'win bpan'); p.dataset.id = a.id; const f = faceOf(a.face); if (f) { f.className = 'bface'; p.appendChild(f); } p.appendChild(el('div', 'binfo')); h.appendChild(p); } }
-    for (const a of this.allies) { const p = this.panelOf(a); if (!p) continue; const sts = Object.keys(a.st).filter((k) => a.st[k] > 0 && ST[k]); p.classList.toggle('down', a.hp <= 0); p.classList.toggle('capt', !!a.st.capt); p.classList.toggle('mk', !!a.marked);
+    for (const a of this.allies) { const p = this.panelOf(a); if (!p) continue; const sts = stList(a); p.classList.toggle('down', a.hp <= 0); p.classList.toggle('capt', !!a.st.capt); p.classList.toggle('mk', !!a.marked);
       const bi = p.querySelector('.binfo'); if (!bi.firstChild) bi.innerHTML = '<div class="bn"></div><div class="bbar hp"><s></s><i></i></div><div class="bnum"></div><div class="bbar mp"><i></i></div><div class="bnum mp"></div>';
       const set = (sel, html) => { const n = bi.querySelector(sel); if (n.innerHTML !== html) n.innerHTML = html; }, hpk = clamp(a.hp / a.max, 0, 1) * 100;
-      set('.bn', `<b>${esc(a.name)}</b><small>Lv${a.lv}</small>${sts.map((k) => `<u class="${BAD.includes(k) || k === 'capt' ? 'bad' : ''}">${ST[k]}</u>`).join('')}`);
+      set('.bn', `<b>${esc(a.name)}</b><small>Lv${a.lv}</small>${sts.map((k) => `<u class="${BAD.includes(k) || k === 'capt' ? 'bad' : ''}" style="background:${STC[k] || '#6a3a8a'}">${ST[k]}</u>`).join('')}`);
       set('.bnum', `${a.hp}<small>/${a.max}</small>`); set('.bnum.mp', `${a.mp}<small>/${a.mmax}</small>`);
       bi.querySelector('.hp i').style.width = hpk + '%'; bi.querySelector('.hp s').style.width = hpk + '%'; bi.querySelector('.mp i').style.width = (a.mmax ? clamp(a.mp / a.mmax, 0, 1) * 100 : 0) + '%'; }
     const ab = $('bauto'); if (this.auto && !ab) { const b = el('div', 'bautotag', '總攻擊中　按任意鍵停止'); b.id = 'bauto'; $('ui').appendChild(b); } else if (!this.auto && ab) ab.remove();

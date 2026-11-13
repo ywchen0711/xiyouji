@@ -82,3 +82,6 @@ html, body { margin: 0; height: 100%; background: #0a0604; color: var(--txt); ov
 
 /* the portraits are pixel art: keep the squares sharp */
 #ui canvas, .bface, .tface, .detail canvas, .endfaces canvas { image-rendering: pixelated; }
+
+/* status tags on the pilgrims' windows: a coloured chip per status */
+.bn u, .bn u.bad { color: #fff; padding: 0 .2em; border-radius: 2px; line-height: 1.15; text-shadow: 0 1px 0 #000; } .bn u + u { margin-left: -.15em; }
