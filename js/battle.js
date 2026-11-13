@@ -37,10 +37,11 @@ export class Battle {
     this.layout(); this.bg = backdrop(o.theme || 'mount', o.ep);
   }
   layout() {
-    const live = this.foes, n = live.length, W = 384;
-    let cw = this.o.boss && n <= 2 ? 96 : n <= 3 ? 74 : n <= 4 ? 66 : 58, gap = 8; const total = n * cw + (n - 1) * gap; if (total > 360) { cw = (360 - (n - 1) * gap) / n; }
+    // the demons stand to the right of the command windows (x 8–92), so choosing a command or a spell never hides one
+    const live = this.foes, n = live.length, X0 = 98, W = 380 - X0;
+    let cw = this.o.boss && n <= 2 ? 96 : n <= 3 ? 74 : n <= 4 ? 66 : 58, gap = 8; const total = n * cw + (n - 1) * gap; if (total > W) { cw = (W - (n - 1) * gap) / n; }
     const big = (f) => (f.boss && this.o.boss ? 1 : 0.86);
-    let x = (W - (n * cw + (n - 1) * gap)) / 2;
+    let x = X0 + (W - (n * cw + (n - 1) * gap)) / 2;
     for (const f of live) { const w = cw * big(f), h = w * 1.25; f.box = { x: x + (cw - w) / 2, y: 126 - h + (f.boss ? 4 : 0) + 6, w, h }; x += cw + gap; }
   }
   alive(side) { return (side === 'ally' ? this.allies : this.foes).filter((b) => b.hp > 0 && !b.st.capt); }
@@ -190,7 +191,7 @@ export class Battle {
     const list = this.foes.map((f, i) => [f, i]).filter(([f]) => f.hp > 0 && !f.st.capt); if (list.length === 1) return Promise.resolve(list[0][0]);
     return new Promise((res) => { let k = 0; this.cursor = list[0][1]; const off = input.on((a) => { if (a === 'left' || a === 'up') k = (k + list.length - 1) % list.length; if (a === 'right' || a === 'down') k = (k + 1) % list.length; this.cursor = list[k][1]; if (a === 'ok') { done(list[k][0]); } if (a === 'cancel') done(null); }); const done = (v) => { off(); this.cursor = -1; this.pickAt = null; res(v); }; this.pickAt = (x, y) => { for (const [f] of list) { const b = f.box; if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h + 16) return done(f); } }; });
   }
-  async pickAlly(dead) { const list = this.allies.filter((a) => (dead ? a.hp <= 0 : a.hp > 0) && !a.st.capt); if (!list.length) return null; return menu(list.map((a) => ({ label: a.name, hint: `${a.hp}/${a.max}`, value: a })), { title: dead ? '救誰？' : '給誰？', cls: 'bcmd', place: (w) => { w.style.left = 'calc(var(--s) * 100px)'; w.style.top = 'calc(var(--s) * 58px)'; } }); }
+  async pickAlly(dead) { const list = this.allies.filter((a) => (dead ? a.hp <= 0 : a.hp > 0) && !a.st.capt); if (!list.length) return null; return menu(list.map((a) => ({ label: a.name, hint: `${a.hp}/${a.max}`, value: a })), { title: dead ? '救誰？' : '給誰？', cls: 'bcmd', place: (w) => { w.style.left = 'calc(var(--s) * 8px)'; w.style.top = 'calc(var(--s) * 58px)'; } }); }
   click(x, y) { if (this.pickAt) this.pickAt(x, y); }
   // the pilgrims fighting on their own: the master heals, the rest strike the weakest (or all, when there are many)
   autoOrder(b) {

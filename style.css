@@ -62,6 +62,7 @@ html, body { margin: 0; height: 100%; background: #0a0604; color: var(--txt); ov
 .bpop { position: absolute; left: 50%; top: 10%; transform: translateX(-50%); font: 900 calc(var(--s) * 9px) "Noto Sans TC", sans-serif; text-shadow: 0 0 calc(var(--s) * 1px) #000, calc(var(--s) * 0.6px) calc(var(--s) * 0.6px) 0 #000; animation: pop .9s forwards; white-space: nowrap; z-index: 5; }
 @keyframes pop { 0% { opacity: 0; transform: translate(-50%, 0); } 15% { opacity: 1; transform: translate(-50%, calc(var(--s) * -10px)); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, calc(var(--s) * -14px)); } }
 .menu.bcmd { right: auto; z-index: 22; }
+.menu.bcmd.wide { min-width: calc(var(--s) * 84px); max-width: calc(var(--s) * 86px); } /* the spell and item lists keep to the left column, clear of the demons */
 #bbanner { left: 50%; top: calc(var(--s) * 4px); transform: translateX(-50%); font-weight: 900; color: var(--gold); white-space: nowrap; z-index: 21; pointer-events: none !important; padding: calc(var(--s) * 2px) calc(var(--s) * 8px); }
 .bautotag { position: absolute; right: calc(var(--s) * 6px); top: calc(var(--s) * 4px); color: #ff9a6a; font-weight: 900; text-shadow: 0 0 calc(var(--s) * 2px) #000; animation: blink 1s infinite; pointer-events: none !important; z-index: 21; }
 /* title and ending */
